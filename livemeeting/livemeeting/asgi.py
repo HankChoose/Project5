@@ -9,14 +9,10 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'livemeeting.settings')
 
 django_asgi_app = get_asgi_application()
 
-import chat.routing
-import board.routing  # <- 新增
+# sharescreen/routing.py
+from django.urls import re_path
+from . import consumers
 
-application = ProtocolTypeRouter({
-    "http": django_asgi_app,
-    "websocket": AuthMiddlewareStack(
-        URLRouter(
-            chat.routing.websocket_urlpatterns + board.routing.websocket_urlpatterns
-        )
-    ),
-})
+websocket_urlpatterns = [
+    re_path(r'ws/sharescreen/(?P<room_name>\w+)/$', consumers.ShareScreenConsumer.as_asgi()),
+]

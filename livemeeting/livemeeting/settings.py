@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'board',
     'chat',
     'channels',
+    'sharescreen',
     'users',
 ]
 
