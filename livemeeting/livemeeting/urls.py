@@ -11,7 +11,6 @@ urlpatterns = [
     path('board/', include('board.urls')),  # 确保这里有 board.urls
     path('chat/', include('chat.urls')),
     path("users/", include("users.urls")),
-    path("sharescreen/", include("sharescreen.urls")),
     path('', views.index, name='index'),  # 添加根路径 '/'
 ]
 
