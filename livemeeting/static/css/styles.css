@@ -1,0 +1,168 @@
+/* === 全局样式 === */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0b5ed7;
+  color: white;
+  padding: 1rem 2rem;
+  box-sizing: border-box;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+main {
+  padding: 1rem;
+}
+
+/* === 主容器 === */
+#main-board-container {
+  display: flex;
+  flex-direction: row;  /* 左右排列 */
+  gap: 20px;
+  padding: 20px;
+  align-items: flex-start;
+}
+
+/* === 左侧面板 === */
+#left-panel {
+  width: 200px;
+  padding: 12px;
+  border-right: 1px solid #e0e0e0;
+  box-sizing: border-box;
+  margin-left: -20px;  /* 负值使其向左移动 */
+}
+
+.panel-section {
+  border: 1px solid #ddd;
+  padding: 8px;
+  margin-bottom: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+#left-panel h3 {
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+#left-panel ul {
+  list-style-type: none;
+  padding-left: 0;
+  text-align: left;
+}
+
+#left-panel li {
+  margin-bottom: 8px;
+}
+
+#left-panel a {
+  text-decoration: none;
+  color: #007bff;
+}
+
+/* === 右侧区域 === */
+#right-panel {
+  flex-grow: 1;  /* 右侧区域自适应宽度 */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* === 白板区域 === */
+#board-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#board-title {
+  margin: 0;
+}
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #f8f8f8;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#canvas-wrap {
+  width: 100%;
+}
+
+#board-canvas {
+  display: block;
+  width: 100%;
+  height: 300px;
+  border: 1px solid #ccc;
+}
+
+/* === 聊天区域 === */
+#chat-area {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fafafa;
+  padding: 10px;
+}
+
+#chat-header {
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 16px;
+  border-bottom: 1px solid #ccc;
+}
+
+#messages {
+  height: 220px;
+  border: 1px solid #ccc;
+  padding: 6px;
+  overflow-y: auto;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+
+#chat-input-container {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#chat-input {
+  flex: 1;
+  padding: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+#send-btn {
+  padding: 6px 12px;
+  font-size: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+}

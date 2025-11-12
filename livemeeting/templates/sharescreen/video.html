@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>共享视频房间 {{ room_name }}</title>
+</head>
+<body>
+<h1>房间: {{ room_name }}</h1>
+
+<input type="file" id="fileInput" accept="video/*">
+<br><br>
+<video id="localVideo" width="480" controls></video>
+<br>
+<button id="start">开始共享视频</button>
+
+<h2>远程视频</h2>
+<div id="remoteVideos"></div>
+
+<script>
+const roomName = "{{ room_name }}";
+const fileInput = document.getElementById("fileInput");
+const startButton = document.getElementById("start");
+const localVideo = document.getElementById("localVideo");
+const remoteVideos = document.getElementById("remoteVideos");
+
+let userId = null;
+let isHost = false;
+const peers = {};
+let localStream = null;
+
+// 自动获取 Host IP
+// 如果有 ngrok URL 访问，可以在 URL 参数 ?host=xxxx 使用
+const urlParams = new URLSearchParams(window.location.search);
+const hostIP = urlParams.get('host') || (window.location.hostname === 'localhost' ? '10.0.0.206' : window.location.hostname);
+
+const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+const ws = new WebSocket(`${ws_scheme}://${hostIP}:8000/ws/sharescreen/${roomName}/`);
+
+// 用户选择视频文件
+fileInput.onchange = () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    localVideo.src = url;
+    localVideo.load();
+};
+
+ws.onopen = () => console.log("WebSocket 已连接");
+
+ws.onmessage = async (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "init") {
+        userId = data.user_id;
+        ws.send(JSON.stringify({ type: "join", user_id: userId }));
+        return;
+    }
+
+    if (data.type === "new_user" && isHost) {
+        const newUserId = data.new_user_id;
+        if (!localStream) return;
+        const pc = createPeer(newUserId);
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        ws.send(JSON.stringify({
+            type: "offer",
+            offer,
+            sender_id: userId,
+            target_id: newUserId
+        }));
+        return;
+    }
+
+    const sender = data.sender_id;
+    if (!sender || sender === userId) return;
+
+    if (data.type === "offer") {
+        const pc = createPeer(sender);
+        if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        await pc.setRemoteDescription(data.offer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        ws.send(JSON.stringify({
+            type: "answer",
+            answer,
+            sender_id: userId,
+            target_id: sender
+        }));
+    }
+
+    if (data.type === "answer") {
+        if (peers[sender]) await peers[sender].setRemoteDescription(data.answer);
+    }
+
+    if (data.type === "candidate") {
+        if (peers[sender]) await peers[sender].addIceCandidate(data.candidate);
+    }
+};
+
+function createPeer(peerId) {
+    if (peers[peerId]) return peers[peerId];
+
+    const pc = new RTCPeerConnection({
+        iceServers: [
+            { urls: "stun:stun.l.google.com:19302" }
+        ]
+    });
+
+    pc.ontrack = (event) => {
+        let video = document.getElementById(`remote-${peerId}`);
+        if (!video) {
+            video = document.createElement("video");
+            video.id = `remote-${peerId}`;
+            video.autoplay = true;
+            video.controls = true;
+            video.width = 480;
+            remoteVideos.appendChild(video);
+        }
+        video.srcObject = event.streams[0];
+    };
+
+    pc.onicecandidate = (e) => {
+        if (e.candidate) {
+            ws.send(JSON.stringify({
+                type: "candidate",
+                candidate: e.candidate,
+                sender_id: userId,
+                target_id: peerId
+            }));
+        }
+    };
+
+    peers[peerId] = pc;
+    return pc;
+}
+
+startButton.onclick = async () => {
+    if (!localVideo.src) {
+        alert("请先选择视频文件");
+        return;
+    }
+
+    isHost = true;
+    await localVideo.play();
+    localStream = localVideo.captureStream();
+
+    for (const peerId in peers) {
+        localStream.getTracks().forEach(track => peers[peerId].addTrack(track, localStream));
+    }
+
+    ws.send(JSON.stringify({ type: "start_share", user_id: userId }));
+    console.log("视频共享开始");
+};
+</script>
+</body>
+</html>

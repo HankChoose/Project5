@@ -1,0 +1,21 @@
+<!-- templates/board/board_list.html -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Your Boards</h2>
+
+{% if boards %}
+  <ul>
+    {% for board in boards %}
+      <li>
+        <a href="{% url 'board_room_with_id' board_id=board.id %}">{{ board.name }}</a>
+        <small>Created by {{ board.created_by.username }} at {{ board.created_at }}</small>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No boards yet. <a href="{% url 'board_room' %}">Create your first board</a>.</p>
+{% endif %}
+
+{% endblock %}

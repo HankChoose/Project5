@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block content %}
+{% load static %}
+
+<div id="main-board-container">
+  <!-- 左侧面板：用户列表和可进入的其他 Board -->
+  <div id="left-panel">
+    <h3>Board 用户</h3>
+    <div class="panel-section">
+      <ul>
+        {% for u in board.users.all %}
+          <li>
+            {% if u == board.created_by %}
+              <strong>{{ u.username }} (Board 主人)</strong>
+            {% else %}
+              <input type="radio" name="user_permission" value="{{ u.id }}" {% if u == authorized_user %}checked{% endif %}> 
+              {{ u.username }} 
+              {% if u == request.user %}
+                <strong>(你自己)</strong>
+              {% endif %}
+            {% endif %}
+          </li>
+        {% empty %}
+          <li>No users yet</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    {% if is_host %}
+      <p>你是这个 Board 的主人，可以进行管理操作。</p>
+      <!-- 授权和撤销按钮 -->
+      <button id="grant-btn" onclick="grantPermission()">授权</button>
+      <button id="revoke-btn" onclick="revokePermission()">取消授权</button>
+    {% else %}
+      <p>你不是这个 Board 的主人。</p>
+    {% endif %}
+
+    <h3>可进入的 Boards</h3>
+    <div class="panel-section">
+      <ul>
+        {% for other_board in boards %}
+          <li>
+            <a href="{% url 'board_room_with_id' board_id=other_board.id %}">
+              {{ other_board.name }}
+              {% if other_board.id in boards_with_access %}
+                (已加入)
+              {% else %}
+                (未加入)
+              {% endif %}
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- 右侧区域：Board 和聊天区域 -->
+  <div id="right-panel">
+    <!-- 白板区域 -->
+    <div id="board-area">
+      <h2 id="board-title">Board: {{ board.name }}</h2>
+
+      {% if user == board.created_by or user_has_permission %}
+        <div id="toolbar">
+          <button data-tool="pen">✏️ Pen</button>
+          <button data-tool="eraser">🩹 Eraser</button>
+          <button data-tool="rect">⬜ Rect</button>
+          <button data-tool="circle">⚪ Circle</button>
+          <button id="doc-tool" title="上传文档">📄 Document</button>
+<input type="file" id="doc-input" accept=".txt,.pdf,.doc,.docx" style="display:none;">
+
+          <label>Color: <input type="color" id="color-picker" value="#000000"></label>
+          <label>Width: <input type="number" id="line-width" value="2" min="1" max="20"></label>
+
+          <button id="zoom-in-btn">🔍+</button>
+          <button id="zoom-out-btn">🔍-</button>
+          <button id="pan-btn">✋ Pan</button>
+
+          <button id="undo-btn">↩️ Undo</button>
+          <button id="redo-btn">↪️ Redo</button>
+          <button id="clear-btn">🗑️ Clear</button>
+        </div>
+      {% else %}
+        <p>你只能查看白板，无法进行操作。</p>
+      {% endif %}
+
+      <div id="canvas-wrap">
+        <canvas id="board-canvas" width="1000" height="300"></canvas>
+      </div>
+    </div>
+
+    <!-- 聊天区域 -->
+    <div id="chat-area">
+      <div id="chat-header">Chat</div>
+      <div id="messages"></div>
+
+      <div id="chat-input-container">
+        <input id="chat-input" placeholder="Say something...">
+        <button id="send-btn">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const BOARD_ID = "{{ board.id }}";
+  const ROOM_NAME = "{{ board.id }}"; 
+
+  function grantPermission() {
+    const selectedUserId = document.querySelector('input[name="user_permission"]:checked')?.value;
+    if (selectedUserId) {
+      // 使用占位符替换为动态的 user_id
+      const url = "{% url 'grant_permission' board_id=board.id user_id='0' %}".replace('0', selectedUserId);
+      window.location.href = url;
+    } else {
+      alert("请选择一个用户进行授权！");
+    }
+  }
+
+  function revokePermission() {
+    const selectedUserId = document.querySelector('input[name="user_permission"]:checked')?.value;
+    if (selectedUserId) {
+      // 使用占位符替换为动态的 user_id
+      const url = "{% url 'revoke_permission' board_id=board.id user_id='0' %}".replace('0', selectedUserId);
+      window.location.href = url;
+    } else {
+      alert("请选择一个用户进行撤销授权！");
+    }
+  }
+</script>
+<script defer>
+  window.addEventListener('load', () => {
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.165/pdf.worker.min.js';
+    } else {
+      console.error('PDF.js 未加载成功');
+    }
+  });
+</script>
+
+<script src="/static/js/chat.js" defer></script>
+<script src="/static/js/board.js" defer></script>
+
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/styles.css' %}">
+{% endblock %}
+

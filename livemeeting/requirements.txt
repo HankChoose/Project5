@@ -1,0 +1,5 @@
+Django>=5.2
+djangorestframework
+channels>=4.3.1   # 指定 Channels 4 的最新稳定版本
+#channels_redis          # optional, comment out if not using Redis
+daphne

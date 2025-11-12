@@ -1,0 +1,34 @@
+<!-- templates/chat/chat_room.html -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Chat Room: {{ room.name }}</h2>
+
+<div id="messages" style="border:1px solid #ccc; padding:1rem; height:300px; overflow-y:auto;">
+  {% for msg in messages %}
+    <div class="message {% if user.is_authenticated and msg.user == user %}self{% endif %}">
+      <span class="msg-user">{{ msg.user.username if msg.user else "guest" }}</span>:
+      <span class="msg-content">{{ msg.content }}</span>
+      <span class="msg-time">[{{ msg.timestamp|date:"H:i" }}]</span>
+    </div>
+  {% endfor %}
+</div>
+
+<input id="chat-input" placeholder="Type a message..." />
+<button id="send-btn">Send</button>
+
+<script>
+  const ROOM_NAME = "{{ room.id }}";
+</script>
+<script src="/static/js/chat.js" defer></script>
+
+<style>
+/* 自己发送的消息高亮 */
+.message.self {
+  background-color: #d1ffd6;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,99 @@
+<!-- templates/index.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Live Meeting</title>
+    <style>
+        body { font-family: sans-serif; background: #f6f7fb; margin: 0; }
+        header { background: #0b5ed7; color: white; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+        header a { color: white; margin-left: 10px; text-decoration: none; }
+        .container { max-width: 600px; margin: 50px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 8px; margin: 5px 0; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; margin-top: 10px; background: #0b5ed7; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0a53be; }
+        .messages p { color: red; margin: 5px 0; }
+        .tabs { display: flex; margin-bottom: 10px; }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; background: #eee; border-radius: 4px 4px 0 0; }
+        .tab.active { background: #0b5ed7; color: white; }
+        .form-tab { display: none; }
+        .form-tab.active { display: block; }
+        .links a { display: inline-block; margin: 10px; padding: 10px 20px; background: #0b5ed7; color: white; border-radius: 4px; text-decoration: none; }
+        .links a:hover { background: #0a53be; }
+    </style>
+</head>
+<body>
+<header>
+    <div>Live Meeting</div>
+    <div>
+        {% if user.is_authenticated %}
+            欢迎 {{ user.username }} | <a href="?logout=1">登出</a>
+        {% else %}
+            <a href="#login" onclick="showTab('login')">登录</a> | <a href="#register" onclick="showTab('register')">注册</a>
+        {% endif %}
+    </div>
+</header>
+
+<div class="container">
+    {% if not user.is_authenticated %}
+        <!-- Tab 头部 -->
+        <div class="tabs">
+            <div id="tab-login" class="tab {% if tab == 'login' %}active{% endif %}" onclick="showTab('login')">登录</div>
+            <div id="tab-register" class="tab {% if tab == 'register' %}active{% endif %}" onclick="showTab('register')">注册</div>
+        </div>
+
+        <!-- 登录表单 -->
+        <div id="login-form" class="form-tab {% if tab == 'login' %}active{% endif %}">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="login">
+                <input type="hidden" name="next" value="{{ next_url|default:'' }}">
+                <input type="text" name="username" placeholder="用户名" required>
+                <input type="password" name="password" placeholder="密码" required>
+                <button type="submit">登录</button>
+            </form>
+            <p>没有账户？<a href="#" onclick="showTab('register')">请注册</a></p>
+        </div>
+
+        <!-- 注册表单 -->
+        <div id="register-form" class="form-tab {% if tab == 'register' %}active{% endif %}">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="register">
+                <input type="text" name="username" placeholder="用户名" required>
+                <input type="password" name="password" placeholder="密码" required>
+                <input type="password" name="confirm" placeholder="确认密码" required>
+                <button type="submit">注册</button>
+                <p>Already have an account? <a href="#" onclick="showTab('login')">Login</a></p>
+            </form>
+        </div>
+    {% endif %}
+
+    <!-- 消息显示 -->
+    <div class="messages">
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    </div>
+
+    <!-- 链接 -->
+    <div class="links">
+        <a href="/board/">Go to Board</a>
+        <a href="/chat/">Go to Chat</a>
+    </div>
+</div>
+
+<script>
+function showTab(tab) {
+    document.getElementById("login-form").classList.remove("active");
+    document.getElementById("register-form").classList.remove("active");
+    document.getElementById("tab-login").classList.remove("active");
+    document.getElementById("tab-register").classList.remove("active");
+
+    document.getElementById(tab + "-form").classList.add("active");
+    document.getElementById("tab-" + tab).classList.add("active");
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!-- templates/base.html -->
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>LiveMeeting</title>
+   {% load static %}
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
+  <!-- 1️⃣ 加载 PDF.js（非模块） -->
+  <script src="{% static 'js/pdf.js' %}"></script>
+
+  <!-- 2️⃣ 设置 workerSrc -->
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      if (window.pdfjsLib) {
+        // ✅ 强制替换 workerSrc，不论内部是否调用 createCDNWrapper
+        Object.defineProperty(pdfjsLib.GlobalWorkerOptions, "workerSrc", {
+          value: "{% static 'js/pdf.worker.js' %}",
+          writable: false,
+          configurable: true
+        });
+
+        console.log("✅ 强制使用本地 PDF.worker.js:", pdfjsLib.GlobalWorkerOptions.workerSrc);
+      } else {
+        console.error("❌ pdfjsLib 未定义，请检查 PDF.js 是否加载成功。");
+      }
+    });
+  </script>
+
+  <!-- 其他 JS 文件 -->
+  <script src="{% static 'js/main.js' %}" defer></script>
+<body>
+  <header>
+    <div id="header-left">
+      <h1>LiveMeeting</h1>
+    </div>
+    <div id="header-right" style="position: relative;">
+      {% if user.is_authenticated %}
+        <div>Signed in as {{ user.username }} | <a href="{% url 'logout' %}">登出</a></div>
+      {% else %}
+        <a href="{% url 'admin:login' %}">Admin login</a>
+      {% endif %}
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
