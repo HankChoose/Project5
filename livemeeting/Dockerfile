@@ -1,9 +1,5 @@
-# --------------------------
-# Stage 1: Build / Install dependencies
-# --------------------------
 FROM python:3.11-slim
 
-# 设置工作目录
 WORKDIR /app
 
 # 安装系统依赖
@@ -20,11 +16,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 拷贝整个项目
 COPY . /app/
 
+# 确保 staticfiles 目录存在
+RUN mkdir -p /app/staticfiles
+
 # Django 收集静态文件
 RUN python manage.py collectstatic --noinput
 
 # 暴露端口
 EXPOSE 8000
 
-# 默认启动命令：运行 Daphne（支持 WebSocket）
+# 默认启动 Daphne（支持 WebSocket）
 CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "livemeeting.asgi:application"]
