@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 <h2>Room: {{ room_name }}</h2>
@@ -8,9 +9,6 @@
 
 <script type="module" src="{% static 'js/sharescreen.js' %}"></script>
 <script>
-    // 绑定事件
-    document.getElementById("startBtn").addEventListener("click", () => {
-        initShareScreen("{{ room_name }}");
-    });
+    initShareScreen("{{ room_name }}");
 </script>
 {% endblock %}

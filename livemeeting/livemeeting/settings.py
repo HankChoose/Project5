@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-y&beybv35r_8!uc4eot=7mzk)=pudf_8*dt-t@(@3*$o!a0!nm'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+#DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -37,6 +37,10 @@ CSRF_TRUSTED_ORIGINS = [
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+# 生产环境收集静态文件
+STATIC_ROOT = BASE_DIR / "staticfiles"  # collectstatic 会把所有静态文件收集到这里
+
 
 # Application definition
 
