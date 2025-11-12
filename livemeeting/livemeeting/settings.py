@@ -129,6 +129,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
+# Docker 收集静态文件需要这个路径
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 # channels layer 配置
 CHANNEL_LAYERS = {
