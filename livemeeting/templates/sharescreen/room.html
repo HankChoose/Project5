@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}   <!-- ← 加这一行 -->
 
 {% block content %}
 <h2>Room: {{ room_name }}</h2>
@@ -8,6 +9,6 @@
 
 <script src="{% static 'js/sharescreen.js' %}"></script>
 <script>
-    initShareScreen("{{ room_name }}");  // 调用 sharescreen.js
+    initShareScreen("{{ room_name }}");
 </script>
 {% endblock %}
