@@ -1,75 +1,130 @@
-const peers = {}; // 保存每个远端 peer
-
-export function initShareScreen(roomName) {
+// sharescreen.js
+export async function initShareScreen(roomName) {
     const localVideo = document.getElementById("localVideo");
-    const remoteVideo = document.getElementById("remoteVideo");
+    const remoteVideosContainer = document.getElementById("remoteVideos");
+    const startBtn = document.getElementById("startBtn");
 
-    const ws = new WebSocket(
-        `wss://${window.location.host}/ws/sharescreen/${roomName}/`
-    );
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const wsUrl = `${wsScheme}://${window.location.host}/ws/sharescreen/${roomName}/`;
+    const socket = new WebSocket(wsUrl);
 
-    let localStream = null;
+    let localStream;
+    const peers = {}; // key = peer_id, value = RTCPeerConnection
 
-    document.getElementById("startBtn").onclick = async () => {
+    // 获取本地屏幕流
+    async function startLocalScreen() {
         localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
         localVideo.srcObject = localStream;
+    }
 
-        ws.send(JSON.stringify({ type: "new-peer" }));
-    };
+    startBtn.onclick = startLocalScreen;
 
-    ws.onmessage = async (event) => {
+    // WebSocket 接收消息
+    socket.onmessage = async (event) => {
         const data = JSON.parse(event.data);
 
-        const peerId = data.peer_id || "peer";
-        if (!peers[peerId]) {
-            peers[peerId] = new RTCPeerConnection();
+        if (data.type === "new-peer") {
+            const peerId = data.peer_id;
+            if (peerId === socket.id) return;
 
-            // 接收远端 track
-            peers[peerId].ontrack = (e) => {
-                remoteVideo.srcObject = e.streams[0];
-            };
+            const pc = new RTCPeerConnection();
+            peers[peerId] = pc;
 
-            // 添加本地流到 peer
+            // 把本地流添加到 PeerConnection
             if (localStream) {
-                localStream.getTracks().forEach(track => {
-                    peers[peerId].addTrack(track, localStream);
-                });
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
             }
 
-            // ICE candidates
-            peers[peerId].onicecandidate = (e) => {
+            // 创建远端视频标签
+            const video = document.createElement("video");
+            video.autoplay = true;
+            video.id = `remote_${peerId}`;
+            video.style = "width:300px;border:1px solid #333;margin:5px;";
+            remoteVideosContainer.appendChild(video);
+
+            pc.ontrack = (e) => {
+                video.srcObject = e.streams[0];
+            };
+
+            // ICE candidate 处理
+            pc.onicecandidate = (e) => {
                 if (e.candidate) {
-                    ws.send(JSON.stringify({
+                    socket.send(JSON.stringify({
                         type: "ice-candidate",
-                        candidate: e.candidate,
-                        peer_id: peerId
+                        target: peerId,
+                        candidate: e.candidate
                     }));
                 }
             };
-        }
 
-        if (data.type === "offer") {
-            await peers[peerId].setRemoteDescription(data.sdp);
-            const answer = await peers[peerId].createAnswer();
-            await peers[peerId].setLocalDescription(answer);
-            ws.send(JSON.stringify({
-                type: "answer",
-                sdp: peers[peerId].localDescription,
-                peer_id: peerId
-            }));
-        } else if (data.type === "answer") {
-            await peers[peerId].setRemoteDescription(data.sdp);
-        } else if (data.type === "ice-candidate") {
-            await peers[peerId].addIceCandidate(data.candidate);
-        } else if (data.type === "new-peer") {
-            // 创建 offer 给新用户
-            const offer = await peers[peerId].createOffer();
-            await peers[peerId].setLocalDescription(offer);
-            ws.send(JSON.stringify({
+            // 创建 offer
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            socket.send(JSON.stringify({
                 type: "offer",
-                sdp: peers[peerId].localDescription,
-                peer_id: peerId
+                target: peerId,
+                sdp: offer
             }));
+
+        } else if (data.type === "offer") {
+            const peerId = data.sender;
+            const pc = new RTCPeerConnection();
+            peers[peerId] = pc;
+
+            // 本地流
+            if (localStream) {
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            }
+
+            // 创建远端视频标签
+            const video = document.createElement("video");
+            video.autoplay = true;
+            video.id = `remote_${peerId}`;
+            video.style = "width:300px;border:1px solid #333;margin:5px;";
+            remoteVideosContainer.appendChild(video);
+
+            pc.ontrack = (e) => {
+                video.srcObject = e.streams[0];
+            };
+
+            pc.onicecandidate = (e) => {
+                if (e.candidate) {
+                    socket.send(JSON.stringify({
+                        type: "ice-candidate",
+                        target: peerId,
+                        candidate: e.candidate
+                    }));
+                }
+            };
+
+            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            socket.send(JSON.stringify({
+                type: "answer",
+                target: peerId,
+                sdp: answer
+            }));
+
+        } else if (data.type === "answer") {
+            const pc = peers[data.sender];
+            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+
+        } else if (data.type === "ice-candidate") {
+            const pc = peers[data.sender];
+            if (pc) {
+                try {
+                    await pc.addIceCandidate(data.candidate);
+                } catch (err) {
+                    console.error("ICE candidate error:", err);
+                }
+            }
         }
+    };
+
+    socket.onopen = () => {
+        console.log("WebSocket connected");
     };
 }

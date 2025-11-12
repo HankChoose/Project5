@@ -3,12 +3,19 @@
 
 {% block content %}
 <h2>Room: {{ room_name }}</h2>
-<video id="localVideo" autoplay muted></video>
-<video id="remoteVideo" autoplay></video>
+
+<!-- 本地屏幕 -->
+<video id="localVideo" autoplay muted style="width:300px;border:1px solid #333;"></video>
+
+<!-- 远端视频容器 -->
+<div id="remoteVideos"></div>
+
 <button id="startBtn">Start Sharing</button>
 
+<!-- ES6 模块方式加载 -->
 <script type="module">
-    import { initShareScreen } from '{% static "js/sharescreen.js" %}';
-    initShareScreen("{{ room_name }}");
+import { initShareScreen } from '{% static "js/sharescreen.js" %}';
+
+initShareScreen("{{ room_name }}");
 </script>
 {% endblock %}
