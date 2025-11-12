@@ -36,11 +36,12 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "static"]
+
+# 调试阶段保留原来的静态目录
+STATICFILES_DIRS = [BASE_DIR / "static"]  
 
 # 生产环境收集静态文件
-STATIC_ROOT = BASE_DIR / "staticfiles"  # collectstatic 会把所有静态文件收集到这里
-
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Application definition
 
