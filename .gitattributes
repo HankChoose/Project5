@@ -1,2 +1,25 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# ---- GitHub Linguist language overrides ----
+
+# 主语言：Python（Django）
+*.py linguist-language=Python
+
+# Django 模板和前端文件
+*.html linguist-language=HTML
+*.css linguist-language=CSS
+*.js linguist-language=JavaScript
+
+# 忽略静态文件和非代码文件的语言统计
+*.json linguist-detectable=false
+*.lock linguist-detectable=false
+*.png linguist-detectable=false
+*.jpg linguist-detectable=false
+*.jpeg linguist-detectable=false
+*.gif linguist-detectable=false
+*.svg linguist-detectable=false
+*.ico linguist-detectable=false
+*.sqlite3 linguist-detectable=false
+*.db linguist-detectable=false
+*.log linguist-detectable=false
