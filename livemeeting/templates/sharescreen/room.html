@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Room: {{ room_name }}</h2>
+<video id="localVideo" autoplay muted></video>
+<video id="remoteVideo" autoplay></video>
+<button id="startBtn">Start Sharing</button>
+
+<script src="{% static 'js/sharescreen.js' %}"></script>
+<script>
+    initShareScreen("{{ room_name }}");
+</script>
+{% endblock %}
