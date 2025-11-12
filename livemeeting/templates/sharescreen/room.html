@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load static %}  <!-- 加这一行 -->
 
 {% block content %}
 <h2>Room: {{ room_name }}</h2>
@@ -7,8 +6,11 @@
 <video id="remoteVideo" autoplay></video>
 <button id="startBtn">Start Sharing</button>
 
-<script src="{% static 'js/sharescreen.js' %}"></script>
+<script type="module" src="{% static 'js/sharescreen.js' %}"></script>
 <script>
-    initShareScreen("{{ room_name }}");
+    // 绑定事件
+    document.getElementById("startBtn").addEventListener("click", () => {
+        initShareScreen("{{ room_name }}");
+    });
 </script>
 {% endblock %}
