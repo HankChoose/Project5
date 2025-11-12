@@ -1,5 +1,5 @@
+{% load static %}
 {% extends 'base.html' %}
-{% load static %}   <!-- ← 加这一行 -->
 
 {% block content %}
 <h2>Room: {{ room_name }}</h2>
@@ -7,8 +7,9 @@
 <video id="remoteVideo" autoplay></video>
 <button id="startBtn">Start Sharing</button>
 
-<script src="{% static 'js/sharescreen.js' %}"></script>
-<script>
+<!-- ES6 模块方式加载 -->
+<script type="module">
+    import { initShareScreen } from '{% static "js/sharescreen.js" %}';
     initShareScreen("{{ room_name }}");
 </script>
 {% endblock %}
