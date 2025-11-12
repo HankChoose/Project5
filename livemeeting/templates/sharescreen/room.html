@@ -3,19 +3,12 @@
 
 {% block content %}
 <h2>Room: {{ room_name }}</h2>
-
-<video id="localVideo" autoplay muted style="width:300px; border:1px solid #333"></video>
-
-<div id="remoteVideos"></div>
-
+<video id="localVideo" autoplay muted></video>
+<video id="remoteVideo" autoplay></video>
 <button id="startBtn">Start Sharing</button>
 
 <script type="module">
-import { initShareScreen } from '{% static "js/sharescreen.js" %}';
-const roomName = "{{ room_name }}";
-const userId = "{{ request.user.id }}";  // 或用随机 uuid
-document.getElementById('startBtn').addEventListener('click', () => {
-    initShareScreen(roomName, userId);
-});
+    import { initShareScreen } from '{% static "js/sharescreen.js" %}';
+    initShareScreen("{{ room_name }}");
 </script>
 {% endblock %}

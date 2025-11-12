@@ -9,7 +9,7 @@ django_asgi_app = get_asgi_application()
 
 import chat.routing
 import board.routing
-import sharescreen.routing
+import sharescreen.routing  # 新增
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
