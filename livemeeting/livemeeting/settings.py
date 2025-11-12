@@ -27,21 +27,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-# CSRF 信任的来源（注意 https:// 前缀必须加上）
-CSRF_TRUSTED_ORIGINS = [
-    'https://hankbeststar.com',
-    'https://www.hankbeststar.com',
-    'localhost', 
-    '127.0.0.1', 
-]
-
-STATIC_URL = '/static/'
-
-# 调试阶段保留原来的静态目录
-STATICFILES_DIRS = [BASE_DIR / "static"]  
-
-# 生产环境收集静态文件
-STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Application definition
 
@@ -54,7 +39,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'board',
     'chat',
-    'sharescreen',
     'channels',
     'users',
 ]
@@ -135,13 +119,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-
+STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # channels layer 配置
 CHANNEL_LAYERS = {
