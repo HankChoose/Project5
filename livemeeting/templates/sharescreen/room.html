@@ -1,15 +1,22 @@
-{% load static %}
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 <h2>Room: {{ room_name }}</h2>
-<video id="localVideo" autoplay muted></video>
-<video id="remoteVideo" autoplay></video>
+
+<div style="display:flex; gap:10px;">
+    <video id="localVideo" autoplay muted style="width:45%; border:1px solid #ccc;"></video>
+    <video id="remoteVideo" autoplay style="width:45%; border:1px solid #ccc;"></video>
+</div>
+
+<br>
 <button id="startBtn">Start Sharing</button>
 
 <!-- ES6 模块方式加载 -->
 <script type="module">
     import { initShareScreen } from '{% static "js/sharescreen.js" %}';
-    initShareScreen("{{ room_name }}");
+    document.getElementById("startBtn").addEventListener("click", () => {
+        initShareScreen("{{ room_name }}");
+    });
 </script>
 {% endblock %}
