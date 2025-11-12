@@ -27,6 +27,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# CSRF 信任的来源（注意 https:// 前缀必须加上）
+CSRF_TRUSTED_ORIGINS = [
+    'https://hankbeststar.com',
+    'https://www.hankbeststar.com',
+]
 
 # Application definition
 
