@@ -1,21 +1,83 @@
 {% extends 'base.html' %}
 {% load static %}
 
+
 {% block content %}
 <h2>Room: {{ room_name }}</h2>
-
-<!-- 本地屏幕 -->
-<video id="localVideo" autoplay muted style="width:300px;border:1px solid #333;"></video>
-
-<!-- 远端视频容器 -->
-<div id="remoteVideos"></div>
-
+<video id="localVideo" autoplay muted style="width:400px; border:1px solid #333;"></video>
+<video id="remoteVideo" autoplay style="width:400px; border:1px solid #333;"></video>
 <button id="startBtn">Start Sharing</button>
 
-<!-- ES6 模块方式加载 -->
 <script type="module">
-import { initShareScreen } from '{% static "js/sharescreen.js" %}';
+let localStream, pc;
+let isOwner = false;
 
-initShareScreen("{{ room_name }}");
+const roomName = "{{ room_name }}";
+const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+const ws = new WebSocket(`${wsScheme}://${window.location.host}/ws/sharescreen/${roomName}/`);
+
+ws.onmessage = async (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === 'role') {
+        isOwner = data.role === 'owner';
+        console.log('Your role:', data.role);
+        if (!isOwner) {
+            startViewer();
+        }
+    } else if (data.type === 'offer' && !isOwner) {
+        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        ws.send(JSON.stringify({ type: 'answer', sdp: answer }));
+    } else if (data.type === 'answer' && isOwner) {
+        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+    } else if (data.type === 'ice') {
+        try {
+            await pc.addIceCandidate(data.candidate);
+        } catch (e) { console.error(e); }
+    } else if (data.type === 'owner_left') {
+        alert('共享者已离开');
+        document.getElementById('remoteVideo').srcObject = null;
+    }
+};
+
+// ICE candidate
+function setupIce() {
+    pc.onicecandidate = e => {
+        if (e.candidate) {
+            ws.send(JSON.stringify({ type: 'ice', candidate: e.candidate }));
+        }
+    };
+}
+
+// viewer 接收远端流
+function startViewer() {
+    pc = new RTCPeerConnection();
+    setupIce();
+    pc.ontrack = e => {
+        document.getElementById('remoteVideo').srcObject = e.streams[0];
+    };
+}
+
+// owner 点击 start
+document.getElementById('startBtn').onclick = async () => {
+    if (!isOwner) return alert('你不是共享者');
+
+    localStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    document.getElementById('localVideo').srcObject = localStream;
+
+    pc = new RTCPeerConnection();
+    setupIce();
+
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+    pc.oniceconnectionstatechange = () => console.log(pc.iceConnectionState);
+
+    // 创建 offer 并发给 viewers
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    ws.send(JSON.stringify({ type: 'offer', sdp: offer }));
+};
 </script>
 {% endblock %}
