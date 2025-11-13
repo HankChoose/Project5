@@ -2,15 +2,17 @@
 {% load static %}
 
 {% block content %}
-<h2>Screen Share Room: {{ room_name }}</h2>
+<h2>Live Screen Sharing: {{ room_name }}</h2>
 
-<!-- 屏幕共享视频 -->
-<video id="localVideo" autoplay muted playsinline style="width:40%; border:1px solid #ccc;"></video>
+<video id="localVideo" autoplay muted style="width:300px;border:1px solid #666"></video>
+<video id="remoteVideo" autoplay style="width:600px;border:1px solid #333"></video>
+<button id="startBtn" style="display:none;">Start Sharing</button>
 
-<!-- 观看端视频 -->
-<div id="viewerVideos"></div>
+<!-- 在模板里定义 roomName -->
+<script>
+    const ROOM_NAME = "{{ room_name }}";  // 注意全大写表示全局常量
+</script>
 
-<button id="startBtn">开始共享屏幕</button>
-
+<!-- 引入独立 JS -->
 <script type="module" src="{% static 'js/sharescreen.js' %}"></script>
 {% endblock %}
