@@ -6,6 +6,7 @@ const ws = new WebSocket(`${ws_scheme}://${window.location.host}/ws/sharescreen/
 let pc = null;
 let localStream = null;
 let isOwner = false;
+const viewersPC = {}; // viewer_id -> RTCPeerConnection
 
 console.log("🔌 Connecting WebSocket to room:", roomName);
 
@@ -53,27 +54,21 @@ ws.onmessage = async (event) => {
 };
 
 async function setupOwner() {
-    cleanup();
-    pc = createPeerConnection();
-
     try {
         localStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        const localVideo = document.getElementById("localVideo");
-        localVideo.srcObject = localStream;
-        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        document.getElementById("localVideo").srcObject = localStream;
         console.log("🎥 本地屏幕流已获取");
     } catch (err) {
         console.error("❌ 获取屏幕流失败:", err);
+        return;
     }
 }
 
 function setupViewer() {
-    cleanup();
-    pc = createPeerConnection();
-    pc.ontrack = (event) => {
-        document.getElementById("remoteVideo").srcObject = event.streams[0];
-        console.log("🎥 收到远程流");
-    };
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    pc.ontrack = (event) => document.getElementById("remoteVideo").srcObject = event.streams[0];
+    pc.onicecandidate = (e) => { if (e.candidate) ws.send(JSON.stringify({ type:"candidate", candidate:e.candidate })); };
+    window.pc = pc; // 全局，方便收到 offer/answer/candidate 时使用
 }
 
 // 清理旧连接
@@ -97,11 +92,27 @@ function createPeerConnection() {
 }
 
 // owner 给新 viewer 发送 offer
+// 当新 viewer 加入或刷新
 async function sendOfferToViewer(viewerId) {
-    if (!pc || !localStream) return;
+    // 如果已有旧连接，先关闭
+    if (viewersPC[viewerId]) {
+        viewersPC[viewerId].close();
+        delete viewersPC[viewerId];
+    }
+
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    viewersPC[viewerId] = pc;
+
+    // 添加本地屏幕流
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+    pc.onicecandidate = (e) => {
+        if (e.candidate) ws.send(JSON.stringify({ type: "candidate", candidate: e.candidate, target: viewerId }));
+    };
+
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    ws.send(JSON.stringify({ type: "offer", offer: offer, target: viewerId }));
+    ws.send(JSON.stringify({ type: "offer", offer, target: viewerId }));
     console.log("📤 已发送 offer 给 viewer:", viewerId);
 }
 

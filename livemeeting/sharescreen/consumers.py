@@ -8,6 +8,15 @@ class ShareScreenConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = f"sharescreen_{self.room_name}"
+        
+        if self.is_owner:
+            rooms[self.room_name]['owner'] = self.channel_name
+            # 给已有 viewer 发送 offer
+            for viewer in rooms[self.room_name]['viewers']:
+                await self.channel_layer.send(self.channel_name, {
+                    'type': 'new_viewer',
+                    'viewer_id': viewer
+                })
 
         if self.room_name not in rooms:
             rooms[self.room_name] = {'owner': None, 'viewers': set()}
