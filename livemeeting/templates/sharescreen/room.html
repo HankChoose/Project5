@@ -1,12 +1,16 @@
-<body>
-  <h1>Screen Share Room</h1>
-  <button id="shareBtn" style="display:none;">开始共享屏幕</button>
+{% extends 'base.html' %}
+{% load static %}
 
-  <!-- 主播端本地视频 -->
-  <video id="localVideo" autoplay muted playsinline style="width:40%; border:1px solid #ccc;"></video>
+{% block content %}
+<h2>Screen Share Room: {{ room_name }}</h2>
 
-  <!-- 观众端远程视频 -->
-  <video id="remoteVideo" autoplay playsinline style="width:80%; border:1px solid #ccc;"></video>
+<!-- 屏幕共享视频 -->
+<video id="localVideo" autoplay muted playsinline style="width:40%; border:1px solid #ccc;"></video>
 
-  <script src="/static/js/sharescreen.js"></script>
-</body>
+<!-- 观看端视频 -->
+<div id="viewerVideos"></div>
+
+<button id="startBtn">开始共享屏幕</button>
+
+<script type="module" src="{% static 'js/sharescreen.js' %}"></script>
+{% endblock %}
