@@ -32,7 +32,6 @@ class ShareScreenConsumer(AsyncWebsocketConsumer):
 
     async def signal_message(self, event):
         if event['sender'] != self.channel_name:
-            # 把 sender 注入到 message 里 (客户端会在 data.sender 或 data._sender 里看到)
             msg = event['message'].copy()
-            msg['sender'] = event['sender']
+            msg['sender'] = event['sender']   # <- 关键：把 sender 注入到 message
             await self.send(json.dumps(msg))
