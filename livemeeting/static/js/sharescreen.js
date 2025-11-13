@@ -22,6 +22,14 @@ ws.onmessage = async (event) => {
         else setupViewer();
     }
 
+    if (!isOwner && data.type === "answer") {
+        const remoteVideo = document.getElementById("remoteVideo");
+        if (remoteVideo.srcObject) {
+            remoteVideo.play().catch(err => console.warn("answer 后 play 失败:", err));
+        }
+}
+
+
     if (data.type === "owner_left") {
         alert("📴 主播已离开，屏幕共享结束");
         document.getElementById("remoteVideo").srcObject = null;
@@ -86,12 +94,23 @@ async function setupOwner() {
 }
 
 function setupViewer() {
-    if (pc) { try { pc.close(); } catch (e) {} }
+    if (pc) { try { pc.close(); } catch(e) {} }
     pc = createPeerConnection();
+    
     const remoteVideo = document.getElementById("remoteVideo");
+    remoteVideo.srcObject = null;  // 清理旧流
+    remoteVideo.autoplay = true;
+    remoteVideo.playsInline = true;
+    remoteVideo.muted = false; // viewer 默认不静音
+     
     pc.ontrack = (event) => {
         console.log("🎥 收到远程流");
         remoteVideo.srcObject = event.streams[0];
+
+        // 🔥 强制播放，解决 autoplay 阻止问题
+        remoteVideo.onloadedmetadata = () => {
+            remoteVideo.play().catch(err => console.warn("无法自动播放 remote 视频:", err));
+        };
     };
 }
 
