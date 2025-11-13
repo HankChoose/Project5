@@ -1,9 +1,9 @@
 const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
 const ws = new WebSocket(`${ws_scheme}://${window.location.host}/ws/sharescreen/${ROOM_NAME}/`);
 
-let isOwner = false;
+let pc = null;
 let localStream = null;
-let viewersPC = {};  // viewer_id -> RTCPeerConnection
+let isOwner = false;
 
 console.log("🔌 Connecting WebSocket to room:", ROOM_NAME);
 
@@ -15,6 +15,7 @@ ws.onmessage = async (event) => {
     console.log("📩 收到 WebSocket 消息:", data);
 
     if (data.type === "role") {
+        console.log("✅ 你的身份:", data.role);
         isOwner = data.role === "owner";
         if (isOwner) setupOwner();
         else setupViewer();
@@ -29,18 +30,16 @@ ws.onmessage = async (event) => {
         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        ws.send(JSON.stringify({ type: "answer", answer, target: data.sender }));
+        ws.send(JSON.stringify({ type: "answer", answer: answer }));
         console.log("📤 已发送 answer:", answer);
     }
 
-    if (data.type === "answer" && isOwner && viewersPC[data.sender]) {
-        await viewersPC[data.sender].setRemoteDescription(new RTCSessionDescription(data.answer));
-        console.log("📩 已设置 answer");
+    if (data.type === "answer" && isOwner) {
+        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
     }
 
-    if (data.type === "candidate") {
-        const targetPC = isOwner ? viewersPC[data.sender] : pc;
-        if (targetPC) await targetPC.addIceCandidate(new RTCIceCandidate(data.candidate));
+    if (data.type === "candidate" && pc) {
+        await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
     }
 
     if (data.type === "new_viewer_joined" && isOwner) {
@@ -48,63 +47,72 @@ ws.onmessage = async (event) => {
     }
 };
 
-// ====== Owner 获取屏幕流 ======
 async function setupOwner() {
+    pc = createPeerConnection();
     try {
-        localStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        document.getElementById("localVideo").srcObject = localStream;
+        localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        const localVideo = document.getElementById("localVideo");
+        localVideo.srcObject = localStream;
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
         console.log("🎥 本地屏幕流已获取");
     } catch (err) {
         console.error("❌ 获取屏幕流失败:", err);
     }
 }
 
-// ====== Viewer 设置 RTCPeerConnection ======
 function setupViewer() {
-    window.pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-    pc.ontrack = e => document.getElementById("remoteVideo").srcObject = e.streams[0];
-    pc.onicecandidate = e => {
-        if (e.candidate) ws.send(JSON.stringify({ type: "candidate", candidate: e.candidate }));
+    pc = createPeerConnection();
+    const remoteVideo = document.getElementById("remoteVideo");
+    pc.ontrack = (event) => {
+        console.log("🎥 收到远程流");
+        remoteVideo.srcObject = event.streams[0];
     };
 }
 
-// ====== Owner 给新 viewer 发送 offer ======
-async function sendOfferToViewer(viewerId) {
-    if (!localStream) return;
-    if (viewersPC[viewerId]) viewersPC[viewerId].close();
+function createPeerConnection() {
+    const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+    });
 
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-    viewersPC[viewerId] = pc;
-
-    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-    pc.onicecandidate = e => {
-        if (e.candidate) ws.send(JSON.stringify({ type: "candidate", candidate: e.candidate, target: viewerId }));
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            ws.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
+        }
     };
 
+    pc.onconnectionstatechange = () => {
+        console.log("🔄 连接状态变化:", pc.connectionState);
+    };
+
+    return pc;
+}
+
+async function sendOfferToViewer(viewerId) {
+    if (!pc || !localStream) return;
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    ws.send(JSON.stringify({ type: "offer", offer, target: viewerId }));
+    ws.send(JSON.stringify({ type: "offer", offer: offer, target: viewerId }));
     console.log("📤 已发送 offer 给 viewer:", viewerId);
 }
 
-// ====== 页面按钮事件 ======
+// 页面按钮事件
 document.addEventListener("DOMContentLoaded", () => {
     const shareBtn = document.getElementById("startBtn");
     if (shareBtn) {
         shareBtn.style.display = isOwner ? "block" : "none";
-        shareBtn.onclick = async () => {
+        shareBtn.addEventListener("click", async () => {
             if (!isOwner) return alert("你不是共享者");
             try {
-                localStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
                 document.getElementById("localVideo").srcObject = localStream;
-                Object.values(viewersPC).forEach(pc => {
-                    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-                });
-                console.log("🎥 本地屏幕流已获取");
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                ws.send(JSON.stringify({ type: "offer", offer: offer }));
+                console.log("📤 已发送 offer 给所有 viewer:", offer);
             } catch (err) {
                 console.error("❌ 屏幕共享失败:", err);
             }
-        };
+        });
     }
 });
