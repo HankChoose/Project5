@@ -1,25 +1,12 @@
-{% extends 'base.html' %}
-{% load static %}
+<body>
+  <h1>Screen Share Room</h1>
+  <button id="shareBtn" style="display:none;">开始共享屏幕</button>
 
-{% block content %}
-<h2>Live Screen Sharing: {{ room_name }}</h2>
+  <!-- 主播端本地视频 -->
+  <video id="localVideo" autoplay muted playsinline style="width:40%; border:1px solid #ccc;"></video>
 
-<div id="ownerSection">
-    <button id="startBtn">Start Sharing</button>
-    <video id="localVideo" autoplay muted playsinline style="width:300px;border:1px solid #666"></video>
-</div>
+  <!-- 观众端远程视频 -->
+  <video id="remoteVideo" autoplay playsinline style="width:80%; border:1px solid #ccc;"></video>
 
-<div id="viewerSection">
-    <h3>Viewer</h3>
-    <div id="viewerVideos"></div>
-</div>
-
-<script type="module">
-import { initShareScreen } from "{% static 'js/sharescreen.js' %}";
-initShareScreen("{{ room_name }}", {
-    localVideoId: "localVideo",
-    viewerVideosId: "viewerVideos",
-    startBtnId: "startBtn"
-});
-</script>
-{% endblock %}
+  <script src="/static/js/sharescreen.js"></script>
+</body>
