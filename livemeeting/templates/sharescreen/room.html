@@ -1,12 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Screen Share Demo</title>
+<style>
+  video { width: 600px; border: 1px solid #ccc; margin: 5px; }
+</style>
+</head>
 <body>
-  <h1>Screen Share Room</h1>
-  <button id="shareBtn" style="display:none;">开始共享屏幕</button>
 
-  <!-- 主播端本地视频 -->
-  <video id="localVideo" autoplay muted playsinline style="width:40%; border:1px solid #ccc;"></video>
+<h2>Owner / Viewer Demo</h2>
 
-  <!-- 观众端远程视频 -->
-  <video id="remoteVideo" autoplay playsinline style="width:80%; border:1px solid #ccc;"></video>
+<div id="ownerSection">
+  <button id="startShareBtn">开始共享屏幕</button>
+  <video id="localVideo" autoplay muted playsinline></video>
+</div>
 
-  <script src="/static/js/sharescreen.js"></script>
+<div id="viewersSection">
+  <h3>Viewer</h3>
+  <div id="viewerVideos"></div>
+</div>
+
+<script src="sharescreen.js"></script>
 </body>
+</html>
