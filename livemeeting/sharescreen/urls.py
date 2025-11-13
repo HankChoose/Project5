@@ -1,7 +1,6 @@
-from django.urls import re_path
-from . import consumers
+from django.urls import path
+from . import views
 
-websocket_urlpatterns = [
-    # 匹配 ws/sharescreen/<room_name>/
-    re_path(r'^ws/sharescreen/(?P<room_name>[-\w]+)/$', consumers.ShareScreenConsumer.as_asgi()),
+urlpatterns = [
+    path('room/<str:room_name>/', views.room, name='room'),
 ]
