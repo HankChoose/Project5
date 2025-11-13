@@ -2,10 +2,9 @@ const roomName = window.location.pathname.split("/").slice(-2, -1)[0];
 const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
 const ws = new WebSocket(`${ws_scheme}://${window.location.host}/ws/sharescreen/${roomName}/`);
 
-let isOwner = false;
+let pc = null;
 let localStream = null;
-const viewersPC = {}; // owner 用，每个 viewer 一个 peer connection
-let pc = null; // viewer 用，连接到 owner
+let isOwner = false;
 
 console.log("🔌 Connecting WebSocket to room:", roomName);
 
@@ -16,115 +15,144 @@ ws.onmessage = async (event) => {
     const data = JSON.parse(event.data);
     console.log("📩 收到 WebSocket 消息:", data);
 
+    // 角色分配
     if (data.type === "role") {
+        console.log("✅ 你的身份:", data.role);
         isOwner = data.role === "owner";
-        console.log(`✅ 你的身份: ${data.role}`);
         if (isOwner) setupOwner();
         else setupViewer();
     }
 
-    if (data.type === "new_viewer_joined" && isOwner) {
-        console.log("👋 新 viewer 加入:", data.viewer_id);
-        await sendOfferToViewer(data.viewer_id);
+    // 主播离开
+    if (data.type === "owner_left") {
+        alert("📴 主播已离开，屏幕共享结束");
+        const remoteVideo = document.getElementById("remoteVideo");
+        if (remoteVideo) remoteVideo.srcObject = null;
     }
 
+    // 收到 offer (viewer)
     if (data.type === "offer" && !isOwner) {
         console.log("📩 收到 offer，准备创建 answer");
         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        ws.send(JSON.stringify({ type: "answer", answer: answer, target: data.sender }));
+        ws.send(JSON.stringify({ type: "answer", answer: answer }));
         console.log("📤 已发送 answer:", answer);
     }
 
+    // 收到 answer (owner)
     if (data.type === "answer" && isOwner) {
-        const viewerId = data.sender;
-        console.log("📩 收到 answer from viewer:", viewerId);
-        const viewerPc = viewersPC[viewerId];
-        if (viewerPc) {
-            await viewerPc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        console.log("📩 收到 answer:", data.answer);
+        try {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        } catch (err) {
+            console.error("❌ setRemoteDescription 失败:", err);
         }
     }
 
-    if (data.type === "candidate") {
-        const targetPC = isOwner ? viewersPC[data.sender] : pc;
-        if (targetPC) {
-            try {
-                await targetPC.addIceCandidate(new RTCIceCandidate(data.candidate));
-                console.log("📩 添加 candidate:", data.candidate);
-            } catch (err) {
-                console.error("❌ 添加 candidate 失败:", err);
-            }
+    // 收到 candidate
+    if (data.type === "candidate" && pc) {
+        console.log("📩 添加 candidate:", data.candidate);
+        try {
+            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        } catch (err) {
+            console.error("❌ 添加 candidate 失败:", err);
         }
     }
 
-    if (data.type === "owner_left" && !isOwner) {
-        alert("📴 主播已离开，屏幕共享结束");
-        const video = document.getElementById("remoteVideo");
-        if (video) video.srcObject = null;
+    // 新 viewer 加入 (owner)
+    if (data.type === "new_viewer_joined" && isOwner) {
+        console.log("👋 新 viewer 加入:", data.viewer_id);
+        // 重新发送 offer 给新加入的 viewer
+        sendOfferToViewer(data.viewer_id);
     }
 };
 
-// ====== 函数 ======
-function setupOwner() {
+// ====== 初始化函数 ======
+async function setupOwner() {
     console.log("🎬 你是 owner");
-    document.getElementById("shareBtn").style.display = "block";
-}
+    pc = createPeerConnection();
 
-async function startShare() {
-    if (!isOwner) return alert("你不是共享者");
-    pc = null;
-    localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-    document.getElementById("localVideo").srcObject = localStream;
-    console.log("🎥 本地屏幕流已获取");
-
-    // 给每个 viewer 创建 PeerConnection 并发送 offer
-    for (const viewerId of Object.keys(viewersPC)) {
-        await sendOfferToViewer(viewerId);
+    try {
+        localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        const localVideo = document.getElementById("localVideo");
+        localVideo.srcObject = localStream;
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        console.log("🎥 本地屏幕流已获取");
+    } catch (err) {
+        console.error("❌ 获取屏幕流失败:", err);
     }
-}
-
-async function sendOfferToViewer(viewerId) {
-    const pcViewer = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-    });
-    viewersPC[viewerId] = pcViewer;
-
-    localStream.getTracks().forEach(track => pcViewer.addTrack(track, localStream));
-
-    pcViewer.onicecandidate = (event) => {
-        if (event.candidate) {
-            ws.send(JSON.stringify({
-                type: "candidate",
-                candidate: event.candidate,
-                target: viewerId
-            }));
-        }
-    };
-
-    const offer = await pcViewer.createOffer();
-    await pcViewer.setLocalDescription(offer);
-    ws.send(JSON.stringify({ type: "offer", offer: offer, target: viewerId }));
-    console.log("📤 已发送 offer 给 viewer:", viewerId);
 }
 
 function setupViewer() {
     console.log("👀 你是 viewer，等待 offer...");
-    pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-    });
-
+    pc = createPeerConnection();
+    const remoteVideo = document.getElementById("remoteVideo");
     pc.ontrack = (event) => {
         console.log("🎥 收到远程流");
-        const remoteVideo = document.getElementById("remoteVideo");
         remoteVideo.srcObject = event.streams[0];
-    };
-
-    pc.onicecandidate = (event) => {
-        if (event.candidate) {
-            ws.send(JSON.stringify({ type: "candidate", candidate: event.candidate, target: rooms.owner }));
-        }
     };
 }
 
-document.getElementById("shareBtn").addEventListener("click", startShare);
+// ====== PeerConnection 创建 ======
+function createPeerConnection() {
+    const config = {
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+    };
+    const pc = new RTCPeerConnection(config);
+
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            ws.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
+            console.log("📤 已发送 ICE candidate:", event.candidate);
+        }
+    };
+
+    pc.onconnectionstatechange = () => {
+        console.log("🔄 连接状态变化:", pc.connectionState);
+    };
+
+    return pc;
+}
+
+// ====== owner 手动给新 viewer 发送 offer ======
+async function sendOfferToViewer(viewerId) {
+    if (!pc || !localStream) return;
+
+    // 先创建新的 offer
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    // 通过 WebSocket 通知后端转发给指定 viewer
+    ws.send(JSON.stringify({
+        type: "offer",
+        offer: offer,
+        target: viewerId
+    }));
+    console.log("📤 已发送 offer 给 viewer:", viewerId, offer);
+}
+
+// ====== 页面按钮事件 ======
+document.addEventListener("DOMContentLoaded", () => {
+    const shareBtn = document.getElementById("shareBtn");
+    if (shareBtn) {
+        shareBtn.style.display = isOwner ? "block" : "none";
+        shareBtn.addEventListener("click", async () => {
+            if (!isOwner) return alert("你不是共享者");
+            try {
+                localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+                const localVideo = document.getElementById("localVideo");
+                localVideo.srcObject = localStream;
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                console.log("🎥 本地屏幕流已获取");
+
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                ws.send(JSON.stringify({ type: "offer", offer: offer }));
+                console.log("📤 已发送 offer 给所有 viewer:", offer);
+            } catch (err) {
+                console.error("❌ 屏幕共享失败:", err);
+            }
+        });
+    }
+});
