@@ -37,6 +37,15 @@ ws.onmessage = async (event) => {
         } catch (e) {
             console.error("❌ 添加 candidate 失败:", e);
         }
+    }else if (data.type === "new_viewer_joined" && isOwner) {
+        console.log("👋 有新观众加入，重新发送 offer");
+
+        if (pc && localStream) {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            ws.send(JSON.stringify({ type: "offer", offer: offer }));
+            console.log("📤 已重新发送 offer 给新观众:", offer);
+        }
     } else if (data.type === "owner_left") {
         alert("📴 主播已离开，屏幕共享结束");
         const video = document.getElementById("remoteVideo");
