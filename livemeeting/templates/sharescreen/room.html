@@ -1,26 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Screen Share Demo</title>
-<style>
-  video { width: 600px; border: 1px solid #ccc; margin: 5px; }
-</style>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
 
-<h2>Owner / Viewer Demo</h2>
+{% block content %}
+<h2>Live Screen Sharing: {{ room_name }}</h2>
 
 <div id="ownerSection">
-  <button id="startShareBtn">开始共享屏幕</button>
-  <video id="localVideo" autoplay muted playsinline></video>
+    <button id="startBtn">Start Sharing</button>
+    <video id="localVideo" autoplay muted playsinline style="width:300px;border:1px solid #666"></video>
 </div>
 
-<div id="viewersSection">
-  <h3>Viewer</h3>
-  <div id="viewerVideos"></div>
+<div id="viewerSection">
+    <h3>Viewer</h3>
+    <div id="viewerVideos"></div>
 </div>
 
-<script src="sharescreen.js"></script>
-</body>
-</html>
+<script type="module">
+import { initShareScreen } from "{% static 'js/sharescreen.js' %}";
+initShareScreen("{{ room_name }}", {
+    localVideoId: "localVideo",
+    viewerVideosId: "viewerVideos",
+    startBtnId: "startBtn"
+});
+</script>
+{% endblock %}
