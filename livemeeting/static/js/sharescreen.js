@@ -1,4 +1,5 @@
-// sharescreen.js
+// static/js/sharescreen/sharescreen.js
+
 const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
 const ws = new WebSocket(`${ws_scheme}://${window.location.host}/ws/sharescreen/${ROOM_NAME}/`);
 
@@ -98,21 +99,22 @@ function setupViewer() {
     pc = createPeerConnection();
     
     const remoteVideo = document.getElementById("remoteVideo");
-    remoteVideo.srcObject = null;  // 清理旧流
+    remoteVideo.srcObject = null;       // 清理旧流
     remoteVideo.autoplay = true;
     remoteVideo.playsInline = true;
-    remoteVideo.muted = false; // viewer 默认不静音
-     
+    remoteVideo.muted = true;           // 静音才能自动播放
+
     pc.ontrack = (event) => {
         console.log("🎥 收到远程流");
         remoteVideo.srcObject = event.streams[0];
 
-        // 🔥 强制播放，解决 autoplay 阻止问题
+        // 尝试播放
         remoteVideo.onloadedmetadata = () => {
-            remoteVideo.play().catch(err => console.warn("无法自动播放 remote 视频:", err));
+            remoteVideo.play().catch(err => console.warn("静音自动播放失败:", err));
         };
     };
 }
+
 
 function createPeerConnection() {
     const pc = new RTCPeerConnection({
