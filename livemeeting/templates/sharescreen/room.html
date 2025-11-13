@@ -4,16 +4,25 @@
 {% block content %}
 <h2>Live Screen Sharing: {{ room_name }}</h2>
 
-<video id="localVideo" autoplay muted style="width:300px;border:1px solid #666"></video>
-<video id="remoteVideo" autoplay style="width:600px;border:1px solid #333"></video>
-<button id="startBtn" style="display:none;">Start Sharing</button>
+<!-- 视频显示 -->
+<div style="display:flex; gap:10px;">
+  <div>
+    <h4>Local (Your Screen)</h4>
+    <video id="localVideo" autoplay muted style="width:300px;border:1px solid #666"></video>
+  </div>
 
-<!-- 在模板里定义 roomName -->
+  <div>
+    <h4>Remote (Shared Screen)</h4>
+    <video id="remoteVideo" autoplay style="width:600px;border:1px solid #333"></video>
+  </div>
+</div>
+
+<!-- 按钮 -->
+<button id="startBtn" style="margin-top:10px;">Start Sharing</button>
+
 <script>
-    const ROOM_NAME = "{{ room_name }}";  // 注意全大写表示全局常量
+    const ROOM_NAME = "{{ room_name }}";  // 用于 WebSocket
 </script>
 
-<!-- 引入独立 JS -->
- 
 <script type="module" src="{% static 'js/sharescreen.js' %}"></script>
 {% endblock %}
