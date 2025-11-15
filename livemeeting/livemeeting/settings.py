@@ -153,3 +153,4 @@ CHANNEL_LAYERS = {
 }
 
 LOGIN_URL = '/'  # 或者你定义的登录页面 URL
+X_FRAME_OPTIONS = 'SAMEORIGIN'

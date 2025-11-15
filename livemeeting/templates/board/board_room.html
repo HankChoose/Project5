@@ -54,6 +54,9 @@
     </div>
   </div>
 
+  <div id="permission-message"
+       style="display:none; color:red; padding:5px; font-size:14px;"></div>
+
   <!-- 右侧区域：Board 和聊天区域 -->
   <div id="right-panel">
     <!-- 白板区域 -->
@@ -61,24 +64,30 @@
       <h2 id="board-title">Board: {{ board.name }}</h2>
 
       {% if user == board.created_by or user_has_permission %}
-        <div id="toolbar">
-          <button data-tool="pen">✏️ Pen</button>
-          <button data-tool="eraser">🩹 Eraser</button>
-          <button data-tool="rect">⬜ Rect</button>
-          <button data-tool="circle">⚪ Circle</button>
-          <button id="doc-tool" title="上传文档">📄 Document</button>
-<input type="file" id="doc-input" accept=".txt,.pdf,.doc,.docx" style="display:none;">
 
-          <label>Color: <input type="color" id="color-picker" value="#000000"></label>
-          <label>Width: <input type="number" id="line-width" value="2" min="1" max="20"></label>
+      <div id="toolbar">
+          <!-- 新增两排：第一排是 share screen 和播放视频 -->
+          <div style="margin-bottom:8px;">
+            <button id="btnShareScreen">✏️Share sharescreen</button>
+            <button id="btnPlayVideo">✏️Play Video</button>
+          </div>
+          <!-- 第二排原来的工具按钮 -->
+          <div>
+            <button data-tool="pen">✏️ Pen</button>
+            <button data-tool="eraser">🩹 Eraser</button>
+            <button data-tool="rect">⬜ Rect</button>
+            <button data-tool="circle">⚪ Circle</button>
+            <label>Color: <input type="color" id="color-picker" value="#000000"></label>
+            <label>Width: <input type="number" id="line-width" value="2" min="1" max="20"></label>
 
-          <button id="zoom-in-btn">🔍+</button>
-          <button id="zoom-out-btn">🔍-</button>
-          <button id="pan-btn">✋ Pan</button>
+            <button id="zoom-in-btn">🔍+</button>
+            <button id="zoom-out-btn">🔍-</button>
+            <button id="pan-btn">✋ Pan</button>
 
-          <button id="undo-btn">↩️ Undo</button>
-          <button id="redo-btn">↪️ Redo</button>
-          <button id="clear-btn">🗑️ Clear</button>
+            <button id="undo-btn">↩️ Undo</button>
+            <button id="redo-btn">↪️ Redo</button>
+            <button id="clear-btn">🗑️ Clear</button>
+          </div>
         </div>
       {% else %}
         <p>你只能查看白板，无法进行操作。</p>
@@ -102,14 +111,46 @@
   </div>
 </div>
 
+<!-- =================== ⬇ Share Screen Modal =================== -->
+<div id="sharescreenModal"
+     style="display:none;
+            position:fixed;
+            left:0; top:0;
+            width:100%; height:100%;
+            background:rgba(0,0,0,0.55);
+            z-index:9999;">
+    
+    <div style="background:white;
+                width:900px;
+                margin:60px auto;
+                padding:15px;
+                border-radius:6px;
+                position:relative;">
+        
+        <span id="closeShare"
+              style="position:absolute;right:15px;top:10px;
+                     cursor:pointer;font-size:20px;">
+            &times;
+        </span>
+
+        <h3>Share Screen</h3>
+
+        <!-- iframe 加载 screen share 页面 -->
+        <iframe id="shareFrame"
+                style="width:100%;height:600px;border:none;"></iframe>
+
+    </div>
+</div>
+
 <script>
-  const BOARD_ID = "{{ board.id }}";
-  const ROOM_NAME = "{{ board.id }}"; 
+  // ✅ BOARD_ID 直接渲染为数字
+  const BOARD_ID = {{ board.id|default:"0" }};
+  window.BOARD_ID = BOARD_ID;
+  const isHost = "{{ is_host|yesno:'true,false' }}" === "true";
 
   function grantPermission() {
     const selectedUserId = document.querySelector('input[name="user_permission"]:checked')?.value;
     if (selectedUserId) {
-      // 使用占位符替换为动态的 user_id
       const url = "{% url 'grant_permission' board_id=board.id user_id='0' %}".replace('0', selectedUserId);
       window.location.href = url;
     } else {
@@ -120,7 +161,6 @@
   function revokePermission() {
     const selectedUserId = document.querySelector('input[name="user_permission"]:checked')?.value;
     if (selectedUserId) {
-      // 使用占位符替换为动态的 user_id
       const url = "{% url 'revoke_permission' board_id=board.id user_id='0' %}".replace('0', selectedUserId);
       window.location.href = url;
     } else {
@@ -128,18 +168,38 @@
     }
   }
 </script>
-<script defer>
-  window.addEventListener('load', () => {
-    if (typeof pdfjsLib !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.165/pdf.worker.min.js';
-    } else {
-      console.error('PDF.js 未加载成功');
-    }
-  });
-</script>
+
+
 
 <script src="/static/js/chat.js" defer></script>
 <script src="/static/js/board.js" defer></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const shareBtn = document.getElementById("btnShareScreen");
+    const closeBtn = document.getElementById("closeShare");
+
+    if (shareBtn) {
+        shareBtn.onclick = () => {
+            const url = `${window.location.origin}/sharescreen/room/${BOARD_ID}/`;
+            document.getElementById("shareFrame").src = url;
+            document.getElementById("sharescreenModal").style.display = "block";
+        };
+    }
+
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            document.getElementById("sharescreenModal").style.display = "none";
+            document.getElementById("shareFrame").src = "";
+        };
+    }
+
+    if (!shareBtn || !closeBtn) {
+        console.warn("btnShareScreen 或 closeShare 未找到！");
+    }
+});
+
+</script>
 
 {% endblock %}
 

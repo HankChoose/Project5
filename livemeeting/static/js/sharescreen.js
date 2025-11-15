@@ -22,6 +22,20 @@ ws.onmessage = async (event) => {
         if (isOwner) setupOwner();
         else setupViewer();
     }
+    // === 控制界面显示 ===
+    document.getElementById("ownerVideoContainer").style.display = isOwner ? "block" : "none";
+    document.getElementById("viewerVideoContainer").style.display = isOwner ? "none" : "block";
+    
+    // === viewer 端自动全屏 ===
+    if (!isOwner) {
+        const remoteVideo = document.getElementById("remoteVideo");
+        // 延迟尝试进入全屏
+        setTimeout(() => {
+            if (remoteVideo.requestFullscreen) {
+                remoteVideo.requestFullscreen().catch(err => console.warn("全屏失败:", err));
+            }
+        }, 1500);
+    }
 
     if (!isOwner && data.type === "answer") {
         const remoteVideo = document.getElementById("remoteVideo");

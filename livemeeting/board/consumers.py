@@ -10,7 +10,7 @@ class BoardConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
-        # 发送初始化 state
+        # 初始化状态
         board_state = await self.get_board_state()
         await self.send(text_data=json.dumps({
             "type": "init_state",
@@ -19,14 +19,11 @@ class BoardConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
-        # 如果创建者退出，清空 Board
-        # await self.clear_if_owner_exit()
 
     async def receive(self, text_data):
         data = json.loads(text_data)
-        print("WS received:", data)  # 🟢 加这一行看看是否收到消息
         allowed_types = ["path","erase","rect","circle","text","clear",
-                         "undo","redo","pdf_upload","pdf_transform"]
+                         "undo","redo","pan"]
         if data.get("type") not in allowed_types:
             return
 
@@ -39,14 +36,16 @@ class BoardConsumer(AsyncWebsocketConsumer):
             }
         )
 
-       # 同步数据库
+        # 数据库同步
         if data["type"] in ["undo", "redo"]:
-            await self.apply_undo_redo(data["type"])
+            action = data.get("action")
+            await self.apply_undo_redo(data["type"], action)
         elif data["type"] == "clear":
             await self.apply_clear()
+        elif data["type"] == "pan":
+            await self.save_pan(data)
         else:
             await self.save_action_to_db(data)
-            print("🟢 Calling save_action_to_db")
 
     async def board_message(self, event):
         await self.send(text_data=json.dumps(event["message"]))
@@ -60,28 +59,20 @@ class BoardConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def save_action_to_db(self, action):
         board = Board.objects.get(id=self.board_id)
-        print("🟢 Before append:", board.state)
         state = board.state or []
         state.append(action)
         board.state = state
-        print("save_action_to_db board.state:", board.state)  # 🟢 加这一行看看是否收到消息
         board.save()
-        print("🟢 After save:", Board.objects.get(id=self.board_id).state)
 
     @database_sync_to_async
-    def apply_undo(self):
+    def save_pan(self, action):
         board = Board.objects.get(id=self.board_id)
         state = board.state or []
-        if state:
-            state.pop()  # 移除最后一条
-            board.state = state
-            board.save()
-
-    @database_sync_to_async
-    def apply_redo(self):
-        # redo 的操作无法在服务器端单独处理
-        # redo 会由客户端重新 push 到数据库
-        pass
+        # 移除旧 pan
+        state = [a for a in state if a.get("type") != "pan"]
+        state.append(action)
+        board.state = state
+        board.save()
 
     @database_sync_to_async
     def apply_clear(self):
@@ -89,10 +80,20 @@ class BoardConsumer(AsyncWebsocketConsumer):
         board.state = []
         board.save()
 
-    @database_sync_to_async
-    def clear_if_owner_exit(self):
-        user = self.scope["user"]
-        board = Board.objects.get(id=self.board_id)
-        if user == board.created_by:
-            board.state = []
-            board.save()
+    async def apply_undo_redo(self, op_type, action=None):
+        board = await database_sync_to_async(Board.objects.get)(id=self.board_id)
+        state = board.state or []
+
+        if op_type == "undo":
+            if state:
+                last_action = state.pop()
+                board.state = state
+                await database_sync_to_async(board.save)()
+                return last_action
+
+        elif op_type == "redo":
+            if action:
+                state.append(action)
+                board.state = state
+                await database_sync_to_async(board.save)()
+                return action

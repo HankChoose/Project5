@@ -6,10 +6,17 @@
 {% block content %}
 <h2>Live Screen Sharing: {{ room_name }}</h2>
 
-<video id="localVideo" autoplay muted style="width:300px;border:1px solid #666"></video>
-<video id="remoteVideo" autoplay style="width:600px;border:1px solid #333"></video>
-<button id="startBtn" style="display:none;">Start Sharing</button>
+<!-- 屏幕共享者 -->
+<div id="ownerVideoContainer" style="display:none;">
+  <video id="localVideo" autoplay muted style="width:800px;border:2px solid #666;border-radius:8px;"></video>
+  <p>🧑‍💻 你正在共享屏幕</p>
+</div>
 
+<!-- 观看者 -->
+<div id="viewerVideoContainer" style="display:none;">
+  <video id="remoteVideo" autoplay style="width:800px;border:2px solid #333;border-radius:8px;"></video>
+  <p>👀 你正在观看共享屏幕</p>
+</div>
 <!-- 在模板里定义 roomName -->
 <script>
     const ROOM_NAME = "{{ room_name }}";  // 注意全大写表示全局常量
