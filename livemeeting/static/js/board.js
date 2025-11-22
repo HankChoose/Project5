@@ -329,7 +329,10 @@ function updateOnlineDot(userList){
     if(t==='pan'){ panMode=true; canvas.style.cursor='grab'; }
     else if(t==='pen'){ canvas.style.cursor='url("/static/icons/pen.png") 5 28, auto'; lineWidth=2; }
     else if(t==='eraser'){ canvas.style.cursor='url("/static/icons/eraser.png") 4 4, auto'; lineWidth=15; }
-    else{ canvas.style.cursor='crosshair'; }
+    else if(t==='rect' || t==='circle'){ 
+        canvas.style.cursor='crosshair'; 
+        lineWidth = 2; // 🔹 给矩形和圆设置默认线宽
+    }
   }
 
   // --- Drawing functions ---
