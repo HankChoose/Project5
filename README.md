@@ -113,6 +113,7 @@ livemeeting/
 │   ├── models.py
 │   ├── views.py
 │   ├── urls.py
+│   ├── routing.py
 │   └── consumers.py
 ├── chat/                      # chat app
 │   ├── migrations/
@@ -121,11 +122,38 @@ livemeeting/
 │   ├── apps.py
 │   ├── models.py
 │   ├── views.py
+│   ├── urls.py
+│   ├── routing.py
 │   └── consumers.py
+├── sharescreen/               # sharescreen app
+│   ├── migrations/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── views.py
+│   ├── urls.py
+│   ├── routing.py
+│   └── consumers.py
+├── users/                     # users app
+│   ├── migrations/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── views.py
+│   ├── urls.py
 ├── templates/
+│   ├── borad
+│   │   └── board_room.html
+│   ├── chat
+│   │   └── chat_room.html
+│   ├── sharescreen
+│   │   └── room.html
+│   ├── users
+│   │   └── register.html
 │   ├── base.html
 │   ├── index.html
-│   └── board_room.html
 ├── static/
 │   ├── css/
 │   │   └── styles.css
@@ -133,6 +161,8 @@ livemeeting/
 │       ├── main.js
 │       ├── board.js
 │       └── chat.js
+        └── sharescreen.js
+
 
 ```
 ## System Architecture Overview

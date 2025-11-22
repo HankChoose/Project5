@@ -435,6 +435,148 @@ function updateOnlineDot(userList){
   });
 
   canvas.addEventListener('mouseleave', ()=>{ if(drawing){drawing=false; currentPath=[]; shapeStart=null; canvas.style.cursor=tool==='pan'?'grab':'crosshair';} });
+  
+  // =========================
+// --- 手机触摸支持 start ---
+// =========================
+
+// 获取触摸坐标
+function getTouchPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0] || e.changedTouches[0];
+    return {
+        x: (touch.clientX - rect.left - offsetX) / scale,
+        y: (touch.clientY - rect.top - offsetY) / scale
+    };
+}
+
+// 触摸开始
+canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const pos = getTouchPos(e);
+    if (tool === 'pan') { // 平移
+        panMode = true;
+        drawing = true;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        canvas.style.cursor = 'grabbing';
+        return;
+    }
+    if (!currentTool || !tool) return;
+    drawing = true;
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = color;
+    if (tool === 'pen' || tool === 'eraser') currentPath = [pos];
+    else if (tool === 'rect' || tool === 'circle') shapeStart = pos;
+});
+
+// 触摸移动
+canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!drawing) return;
+    const pos = getTouchPos(e);
+
+    if (panMode && tool === 'pan') {
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        offsetX += dx;
+        offsetY += dy;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        redrawCanvas();
+        sendToSocket({ type: 'pan', data: { offsetX, offsetY, scale } });
+        return;
+    }
+
+    if (tool === 'pen') {
+        currentPath.push(pos);
+        redrawCanvas();
+        ctx.save();
+        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+        drawPathOnContext(ctx, currentPath, color, lineWidth, 'source-over');
+        ctx.restore();
+    } else if (tool === 'eraser') {
+        currentPath.push(pos);
+        redrawCanvas();
+        ctx.save();
+        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+        drawPathOnContext(ctx, currentPath, null, lineWidth, 'destination-out');
+        ctx.restore();
+    } else if (tool === 'rect' && shapeStart) {
+        const w = pos.x - shapeStart.x;
+        const h = pos.y - shapeStart.y;
+        redrawCanvas();
+        ctx.save();
+        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.strokeRect(shapeStart.x, shapeStart.y, w, h);
+        ctx.restore();
+    } else if (tool === 'circle' && shapeStart) {
+        const dx = pos.x - shapeStart.x;
+        const dy = pos.y - shapeStart.y;
+        const r = Math.sqrt(dx * dx + dy * dy);
+        redrawCanvas();
+        ctx.save();
+        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        ctx.arc(shapeStart.x, shapeStart.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+});
+
+// 触摸结束
+canvas.addEventListener('touchend', e => {
+    e.preventDefault();
+    if (!drawing) return;
+    drawing = false;
+    if (panMode && tool === 'pan') {
+        panMode = false;
+        canvas.style.cursor = 'grab';
+        return;
+    }
+    const pos = getTouchPos(e);
+
+    if (tool === 'pen' && currentPath.length >= 2) {
+        const action = { type: 'path', data: { points: currentPath.slice(), color, lineWidth } };
+        undoStack.push(action);
+        redoStack.length = 0;
+        sendToSocket(action);
+        currentPath = [];
+    } else if (tool === 'eraser' && currentPath.length >= 1) {
+        const action = { type: 'erase', data: { points: currentPath.slice(), lineWidth } };
+        undoStack.push(action);
+        redoStack.length = 0;
+        sendToSocket(action);
+        currentPath = [];
+    } else if (tool === 'rect' && shapeStart) {
+        const w = pos.x - shapeStart.x;
+        const h = pos.y - shapeStart.y;
+        const action = { type: 'rect', data: { x: shapeStart.x, y: shapeStart.y, width: w, height: h, color, lineWidth } };
+        undoStack.push(action);
+        redoStack.length = 0;
+        sendToSocket(action);
+        shapeStart = null;
+        redrawCanvas();
+    } else if (tool === 'circle' && shapeStart) {
+        const dx = pos.x - shapeStart.x;
+        const dy = pos.y - shapeStart.y;
+        const r = Math.sqrt(dx * dx + dy * dy);
+        const action = { type: 'circle', data: { x: shapeStart.x, y: shapeStart.y, radius: r, color, lineWidth } };
+        undoStack.push(action);
+        redoStack.length = 0;
+        sendToSocket(action);
+        shapeStart = null;
+        redrawCanvas();
+    }
+});
+
+// =========================
+// --- 手机触摸支持 end ---
+// =========================
 
   redrawCanvas();
 
