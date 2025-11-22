@@ -165,32 +165,21 @@ async function sendOfferToViewer(viewerId) {
 // 页面按钮事件
 document.addEventListener("DOMContentLoaded", () => {
     const shareBtn = document.getElementById("startBtn");
-    if (!shareBtn) return;
-
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-    if (isMobile) {
-        // 手机端直接隐藏
-        shareBtn.style.display = "none";
-        return;
+    if (shareBtn) {
+        shareBtn.style.display = isOwner ? "block" : "none";
+        shareBtn.addEventListener("click", async () => {
+            if (!isOwner) return alert("你不是共享者");
+            try {
+                localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+                document.getElementById("localVideo").srcObject = localStream;
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                ws.send(JSON.stringify({ type: "offer", offer: offer }));
+                console.log("📤 已发送 offer 给所有 viewer:", offer);
+            } catch (err) {
+                console.error("❌ 屏幕共享失败:", err);
+            }
+        });
     }
-
-    // 电脑端显示按钮只给 owner
-    shareBtn.style.display = isOwner ? "block" : "none";
-
-    shareBtn.addEventListener("click", async () => {
-        if (!isOwner) return alert("你不是共享者");
-        try {
-            localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-            document.getElementById("localVideo").srcObject = localStream;
-            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            ws.send(JSON.stringify({ type: "offer", offer: offer }));
-            console.log("📤 已发送 offer 给所有 viewer:", offer);
-        } catch (err) {
-            console.error("❌ 屏幕共享失败:", err);
-        }
-    });
 });
-

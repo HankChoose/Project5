@@ -164,7 +164,16 @@
 
 <script src="/static/js/chat.js" defer></script>
 <script src="/static/js/board.js" defer></script>
+<script>
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+if (isMobile) {
+    const btnShare = document.getElementById('btnShare');
+    if (btnShare) {
+        btnShare.style.display = 'none'; // 隐藏按钮
+    }
+}
+</script>
 <!-- =============== Video Popup (default hidden) ============== -->
 <div id="videoPopup" 
      style="display:none; 
