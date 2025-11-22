@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# DjangoDB
+*.sqlite3
+
+# Env
+.env*
+.venv/
+venv/
+env/
+ENV/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# VSCode/IDE
+.vscode/
+.idea/
+*.swp
+
+# Static/Media (if any)
+staticfiles/
+media/
+
+# Backup files
+requirementsbak*
+*.bak
+*.old
+*.tmp
+
+# Docker
+Dockerfile*
+docker-compose.yml
+
+# Log
+*.log

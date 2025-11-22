@@ -1,15 +1,19 @@
-# LiveMeeting: Collaborative Whiteboard & Chat Application
+# LiveMeeting: Collaborative Whiteboard, Chat, and Screen & Video Sharing Application
 
-LiveMeeting is a Django-based web application that allows users to collaborate on whiteboards in real-time, chat, share screens, and conduct video meetings. It is fully responsive and supports mobile devices.
+LiveMeeting is a Django-based web application that allows users to collaborate on whiteboards in real-time, chat, share screens or video during meetings. It is fully responsive and supports mobile devices.
 
 ## Core Features
 
 - User registration and login
 - Create and join collaborative whiteboard rooms
+- Multi-user permissions and roles: 
+    - Room owners can grant or revoke access to participants
+    - Participants’ abilities (draw, edit, view, share screen, or share video) are controlled via the toolbar
 - Draw, move, and connect nodes on a whiteboard
-- Real-time chat (group and private messages)
-- Video conferencing and screen sharing
+- Real-time group chat
 - Whiteboard and chat history persistence
+- Screen sharing
+- Video sharing
 - Mobile-responsive design
 
 ## Technologies
@@ -18,32 +22,33 @@ LiveMeeting is a Django-based web application that allows users to collaborate o
 - **Django 4.x** — Backend framework, database models, routing  
 - **JavaScript** — Frontend interactivity and real-time updates  
 - **Django Channels** — WebSocket support for real-time collaboration  
+- **Daphne** — ASGI server for handling HTTP and WebSocket connections
+- **ASGI** — Asynchronous Server Gateway Interface for real-time communication
 - **HTML & CSS** — Page structure and styling  
 - **Canvas / SVG** — Whiteboard rendering and interactions  
 
 ## Requirements
-
+```txt
+Django >= 4.2, < 5.3
+djangorestframework
+daphne
+channels >= 4.3.1 # Specifies the latest stable version of Channels 4
+#channels_redis   # optional, comment out if not using Redis
+```
 Install required packages with:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Dependencies include:
-
-- Django
-- Django Channels
-- channels_redis (optional if using Redis backend)
-- djangorestframework
-- Other packages as listed in `requirements.txt`
-
 ## Getting Started
 
 Clone the repository:
 
 ```bash
-git clone <your-repo-url>
-cd livemeeting
+git clone https://github.com/me50/HankChoose.git
+cd HankChoose/livemeeting    # Linux / Mac
+cd HankChoose\livemeeting    # Windows
 ```
 
 Create a virtual environment:
@@ -71,15 +76,14 @@ python manage.py migrate
 Create a superuser:
 
 ```bash
-python manage.py createsuperuser
+python manage.py createsuperuser (optional)
 ```
 
 Run the development server:
 
 ```bash
-python manage.py runserver
-# 使用 Daphne 运行 Django ASGI
-$env:DJANGO_SETTINGS_MODULE="livemeeting.settings"
+export DJANGO_SETTINGS_MODULE="livemeeting.settings"   # Linux / Mac
+$env:DJANGO_SETTINGS_MODULE="livemeeting.settings"     # Windows PowerShell
 daphne -p 8000 livemeeting.asgi:application
 ```
 

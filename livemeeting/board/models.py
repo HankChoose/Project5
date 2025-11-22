@@ -14,12 +14,35 @@ class Board(models.Model):
     # 新增字段：保存 board 上的操作记录
     state = models.JSONField(default=list, blank=True)
 
+    #✅ 新增字段：记录当前共享屏幕的用户
+    current_sharescreen = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        null=True, 
+        blank=True, 
+        on_delete=models.SET_NULL,
+        related_name="current_sharescreen_board"
+    )
+
+    current_sharevideo_user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="current_video_boards"
+    )
+    current_sharevideo_url = models.URLField(blank=True, null=True)
+
     def __str__(self):
         return self.name
 
     def clear_state(self):
         self.state = []
         self.save()
+    
+    # ✅ 在这里添加方法！
+    def get_authorized_user_ids(self):
+        from .models import BoardUser  # 避免循环导入
+        return BoardUser.objects.filter(board=self, is_authorized=True).values_list("user_id", flat=True)
 
 
 class BoardUser(models.Model):

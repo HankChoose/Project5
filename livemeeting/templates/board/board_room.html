@@ -3,76 +3,91 @@
 {% load static %}
 
 <div id="main-board-container">
-  <!-- 左侧面板：用户列表和可进入的其他 Board -->
+  <!-- Left Panel: Users and Other Accessible Boards -->
   <div id="left-panel">
-    <h3>Board 用户</h3>
+    <h3>Room Users</h3>
     <div class="panel-section">
-      <ul>
-        {% for u in board.users.all %}
-          <li>
-            {% if u == board.created_by %}
-              <strong>{{ u.username }} (Board 主人)</strong>
-            {% else %}
-              <input type="radio" name="user_permission" value="{{ u.id }}" {% if u == authorized_user %}checked{% endif %}> 
-              {{ u.username }} 
-              {% if u == request.user %}
-                <strong>(你自己)</strong>
-              {% endif %}
+      <ul id="room-user-list">
+
+          <!-- 先渲染 Room Owner -->
+          {% if board.created_by %}
+            <li data-user-id="{{ board.created_by.id }}">
+              <span class="online-dot"
+                    style="display:inline-block;width:8px;height:8px;
+                          border-radius:50%;background-color:gray;margin-right:5px;">
+              </span>
+              <strong>{{ board.created_by.username }} (Owner)</strong>
+            </li>
+          {% endif %}
+
+          <!-- 再渲染其它普通用户 -->
+          {% for u in board.users.all %}
+            {% if u != board.created_by %}
+              <li data-user-id="{{ u.id }}">
+                <span class="online-dot"
+                      style="display:inline-block;width:8px;height:8px;
+                            border-radius:50%;background-color:gray;margin-right:5px;">
+                </span>
+
+                {% if is_host %}
+                  <input type="radio" name="user_permission" value="{{ u.id }}"
+                        {% if u == authorized_user %}checked{% endif %}>
+                {% endif %}
+
+                {{ u.username }}
+                {% if u in authorized_users %}
+                  <span class="auth-label" style="color:green;">(Authorized)</span>
+                {% endif %}
+              </li>
             {% endif %}
-          </li>
-        {% empty %}
-          <li>No users yet</li>
-        {% endfor %}
+          {% endfor %}
+
       </ul>
+
     </div>
 
     {% if is_host %}
-      <p>你是这个 Board 的主人，可以进行管理操作。</p>
-      <!-- 授权和撤销按钮 -->
-      <button id="grant-btn" onclick="grantPermission()">授权</button>
-      <button id="revoke-btn" onclick="revokePermission()">取消授权</button>
+      <p>You are the owner of this Board and can manage it.</p>
+      <!-- Grant and Revoke Buttons -->
+   
+      <button id="grant-btn" class="btn-primary-custom" onclick="grantPermission()">Grant Permission</button>
+      <button id="revoke-btn" class="btn-primary-custom" onclick="revokePermission()">Revoke Permission</button>
     {% else %}
-      <p>你不是这个 Board 的主人。</p>
+      <p>You are not the owner of this Board.</p>
     {% endif %}
 
-    <h3>可进入的 Boards</h3>
+    <h3>Accessible Boards</h3>
     <div class="panel-section">
       <ul>
         {% for other_board in boards %}
           <li>
             <a href="{% url 'board_room_with_id' board_id=other_board.id %}">
               {{ other_board.name }}
-              {% if other_board.id in boards_with_access %}
-                (已加入)
-              {% else %}
-                (未加入)
-              {% endif %}
+            
             </a>
           </li>
         {% endfor %}
       </ul>
     </div>
   </div>
-
-  <div id="permission-message"
-       style="display:none; color:red; padding:5px; font-size:14px;"></div>
-
-  <!-- 右侧区域：Board 和聊天区域 -->
+<div id="permission-message"
+     style="display:none; color:red; padding:5px; font-size:14px;"></div>
+  <!-- Right Panel: Board and Chat Area -->
   <div id="right-panel">
-    <!-- 白板区域 -->
+    <!-- Board Area -->
     <div id="board-area">
       <h2 id="board-title">Board: {{ board.name }}</h2>
 
       {% if user == board.created_by or user_has_permission %}
-
-      <div id="toolbar">
-          <!-- 新增两排：第一排是 share screen 和播放视频 -->
-          <div style="margin-bottom:8px;">
-            <button id="btnShareScreen">✏️Share sharescreen</button>
-            <button id="btnPlayVideo">✏️Play Video</button>
+        <div id="toolbar">
+          <!-- Row 1: Sharing -->
+          <div class="toolbar-row" id="toolbar-row-share">
+            <button id="btnShare">🖥️Share Screen</button>
+            <button id="btnShareVideo">📹Share Video</button>
           </div>
-          <!-- 第二排原来的工具按钮 -->
-          <div>
+
+          <!-- Row 2: Drawing Tools -->
+          <div class="toolbar-row" id="toolbar-row-tools">
             <button data-tool="pen">✏️ Pen</button>
             <button data-tool="eraser">🩹 Eraser</button>
             <button data-tool="rect">⬜ Rect</button>
@@ -90,7 +105,7 @@
           </div>
         </div>
       {% else %}
-        <p>你只能查看白板，无法进行操作。</p>
+        <p>You can only view the board and cannot make changes.</p>
       {% endif %}
 
       <div id="canvas-wrap">
@@ -98,7 +113,7 @@
       </div>
     </div>
 
-    <!-- 聊天区域 -->
+    <!-- Chat Area -->
     <div id="chat-area">
       <div id="chat-header">Chat</div>
       <div id="messages"></div>
@@ -111,41 +126,10 @@
   </div>
 </div>
 
-<!-- =================== ⬇ Share Screen Modal =================== -->
-<div id="sharescreenModal"
-     style="display:none;
-            position:fixed;
-            left:0; top:0;
-            width:100%; height:100%;
-            background:rgba(0,0,0,0.55);
-            z-index:9999;">
-    
-    <div style="background:white;
-                width:900px;
-                margin:60px auto;
-                padding:15px;
-                border-radius:6px;
-                position:relative;">
-        
-        <span id="closeShare"
-              style="position:absolute;right:15px;top:10px;
-                     cursor:pointer;font-size:20px;">
-            &times;
-        </span>
-
-        <h3>Share Screen</h3>
-
-        <!-- iframe 加载 screen share 页面 -->
-        <iframe id="shareFrame"
-                style="width:100%;height:600px;border:none;"></iframe>
-
-    </div>
-</div>
-
 <script>
-  // ✅ BOARD_ID 直接渲染为数字
-  const BOARD_ID = {{ board.id|default:"0" }};
-  window.BOARD_ID = BOARD_ID;
+  const user_id = "{{ user.id }}";
+  const BOARD_ID = "{{ board.id }}";
+  const ROOM_NAME = "{{ board.id }}"; 
   const isHost = "{{ is_host|yesno:'true,false' }}" === "true";
 
   function grantPermission() {
@@ -154,7 +138,7 @@
       const url = "{% url 'grant_permission' board_id=board.id user_id='0' %}".replace('0', selectedUserId);
       window.location.href = url;
     } else {
-      alert("请选择一个用户进行授权！");
+      alert("Please select a user to grant permission!");
     }
   }
 
@@ -164,41 +148,59 @@
       const url = "{% url 'revoke_permission' board_id=board.id user_id='0' %}".replace('0', selectedUserId);
       window.location.href = url;
     } else {
-      alert("请选择一个用户进行撤销授权！");
+      alert("Please select a user to revoke permission!");
     }
   }
 </script>
-
-
+<script defer>
+  window.addEventListener('load', () => {
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.165/pdf.worker.min.js';
+    } else {
+      console.error('PDF.js failed to load');
+    }
+  });
+</script>
 
 <script src="/static/js/chat.js" defer></script>
 <script src="/static/js/board.js" defer></script>
 
+<!-- =============== Video Popup (default hidden) ============== -->
+<div id="videoPopup" 
+     style="display:none; 
+            position:fixed; 
+            top:50px; left:50px;
+            width:480px; height:270px;
+            background:#000;
+            border:2px solid #555;
+            border-radius:6px;
+            z-index:9999;
+            resize:both;
+            overflow:hidden;">
+    
+    <!-- Title Bar -->
+    <div id="videoPopupHeader" 
+         style="width:100%; height:32px; background:#222; color:#fff;
+                display:flex; justify-content:space-between;
+                align-items:center; padding:0 10px; cursor:move;">
+        <span>🎞 Video Playback</span>
+        <button id="closeVideoBtn" 
+                style="background:#ff4d4d; border:none; color:#fff; padding:2px 8px;
+                       cursor:pointer; border-radius:4px;">Close</button>
+    </div>
+
+    <!-- Video Body -->
+    <video id="sharedVideo" 
+           controls 
+           style="width:100%; height:calc(100% - 32px); background:#000;">
+    </video>
+</div>
+{{ authorized_users|json_script:"authorized-users" }}
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const shareBtn = document.getElementById("btnShareScreen");
-    const closeBtn = document.getElementById("closeShare");
-
-    if (shareBtn) {
-        shareBtn.onclick = () => {
-            const url = `${window.location.origin}/sharescreen/room/${BOARD_ID}/`;
-            document.getElementById("shareFrame").src = url;
-            document.getElementById("sharescreenModal").style.display = "block";
-        };
-    }
-
-    if (closeBtn) {
-        closeBtn.onclick = () => {
-            document.getElementById("sharescreenModal").style.display = "none";
-            document.getElementById("shareFrame").src = "";
-        };
-    }
-
-    if (!shareBtn || !closeBtn) {
-        console.warn("btnShareScreen 或 closeShare 未找到！");
-    }
-});
-
+  const authorizedUsers = JSON.parse(
+      document.getElementById("authorized-users").textContent
+  );
+  window.authorizedUsers = authorizedUsers;
 </script>
 
 {% endblock %}

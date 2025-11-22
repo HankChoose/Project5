@@ -31,8 +31,8 @@ ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = [
     'https://hankbeststar.com',
     'https://www.hankbeststar.com',
-    'localhost', 
-    '127.0.0.1', 
+     "http://127.0.0.1",
+     "http://localhost",
 ]
 
 STATIC_URL = '/static/'
@@ -154,3 +154,8 @@ CHANNEL_LAYERS = {
 
 LOGIN_URL = '/'  # 或者你定义的登录页面 URL
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+import os
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

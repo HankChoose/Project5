@@ -37,6 +37,7 @@ def check_permissions(request, board_id):
             'can_edit': False
         })
 
+
 @login_required
 def board_room(request, board_id=None):
     user = request.user
@@ -51,7 +52,6 @@ def board_room(request, board_id=None):
     else:
         board = Board.objects.filter(created_by=user).first()
         if not board:
-            # 如果用户没有创建任何 Board，则创建一个新的 Board
             board = Board.objects.create(name=f"{user.username}'s Board", created_by=user)
 
     # 自动将当前用户加入到 Board 的 users 列表中（如果不在其中）
@@ -59,19 +59,25 @@ def board_room(request, board_id=None):
         board.users.add(user)
         board.save()
 
-    # 确保我们可以看到 board 的用户
     print(f"Users for board {board.name}: {[user.username for user in board.users.all()]}")
-    
-    # 添加检查用户是否有权限操作
-    user_has_permission = BoardUser.objects.filter(board=board, user=user, is_authorized=True).exists()
+
+    # 用户是否有操作权限
+    user_has_permission = BoardUser.objects.filter(
+        board=board, user=user, is_authorized=True
+    ).exists()
+
+    # 🔵 新增：获取当前 Board 所有已授权用户 ID 列表
+    authorized_users = list(board.get_authorized_user_ids())
 
     return render(request, "board/board_room.html", {
         "board": board,
         "boards": boards,
         "user_has_permission": user_has_permission,
-        "boards_with_access": boards_with_access,  # 传递给模板
-        "is_host": user == board.created_by,  # 标识是否是 Board 主人
+        "boards_with_access": boards_with_access,
+        "is_host": user == board.created_by,
+        "authorized_users": authorized_users,  # 🔵 传给模板
     })
+
 
 
 # 处理权限控制，允许 Board 主人给用户授权操作
@@ -126,3 +132,34 @@ def user_list(request):
     users = User.objects.all()  # 获取所有用户
     return render(request, "board/test.html", {"users": users})
 
+import os
+import uuid
+from pathlib import Path
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
+
+TEMP_VIDEO_DIR = Path(settings.MEDIA_ROOT) / "temp_videos"
+TEMP_VIDEO_DIR.mkdir(exist_ok=True, parents=True)  # 确保目录存在
+
+
+@csrf_exempt
+def upload_temp_video(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+
+    file = request.FILES.get("video")
+    if not file:
+        return JsonResponse({"error": "No file uploaded"}, status=400)
+
+    # 用 UUID 生成唯一文件名，保留后缀
+    ext = os.path.splitext(file.name)[1]
+    filename = f"{uuid.uuid4().hex}{ext}"
+    save_path = TEMP_VIDEO_DIR / filename
+
+    with open(save_path, "wb+") as f:
+        for chunk in file.chunks():
+            f.write(chunk)
+
+    video_url = f"{settings.MEDIA_URL}temp_videos/{filename}"
+    return JsonResponse({"video_url": video_url})
+ 

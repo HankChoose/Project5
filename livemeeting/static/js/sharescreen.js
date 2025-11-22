@@ -30,11 +30,13 @@ ws.onmessage = async (event) => {
     if (!isOwner) {
         const remoteVideo = document.getElementById("remoteVideo");
         // 延迟尝试进入全屏
+        /*
         setTimeout(() => {
             if (remoteVideo.requestFullscreen) {
                 remoteVideo.requestFullscreen().catch(err => console.warn("全屏失败:", err));
             }
         }, 1500);
+        */
     }
 
     if (!isOwner && data.type === "answer") {

@@ -13,4 +13,5 @@ urlpatterns = [
     path("<int:board_id>/revoke_permission/<int:user_id>/", views.revoke_permission, name="revoke_permission"),  # 撤销权限
     path('user_list/', views.user_list, name='user_list'),
     path('check_permissions/<int:board_id>/', views.check_permissions, name='check_permissions'),
+    path("upload_temp_video/", views.upload_temp_video, name="upload_temp_video"),
 ]

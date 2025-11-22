@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof BOARD_ID === "undefined") return;
   checkPermissions();
 
-  // === 状态变量 ===
+  // === State Variables ===
   let currentTool = null;
   let tool = 'pen';
   let color = '#000000';
@@ -16,11 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentPath = [];
   let shapeStart = null;
 
-  const user_id = "{{ user.id }}";
   const permissionCheckInterval = 5000;
 
-  // === 权限检查 ===
-  // === 权限检查 ===
+  // === Permission Check ===
   function checkPermissions() {
     fetch(`/board/check_permissions/${BOARD_ID}/`)
       .then(res => res.json())
@@ -29,49 +27,113 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (userPermission && !window.permissionGranted) {
           window.permissionGranted = true;
-          updateToolbar(); // 先显示 toolbar
-          alert("你已被授权可以操作白板！");
-          updateToolbar();
+          updateToolbar(); // Show toolbar
+          updateAuthorizedLabels();
+          alert("You have been granted permission to edit the board!");
+
         } 
         else if (!userPermission && window.permissionGranted) {
           window.permissionGranted = false;
-          alert("你已被取消操作权限！");
-          updateToolbar();
+          updateToolbar(); // Update toolbar
+          updateAuthorizedLabels();
+          alert("Your editing permission has been revoked!");
         }
       }).catch(err => console.error(err));
   }
 
-  // 显示/隐藏 toolbar
+  // --- Update user list authorization status (host or non-host) ---
+  function updateAuthorizedLabels() {
+    document.querySelectorAll('#left-panel ul li').forEach(li => {
+      const input = li.querySelector('input[name="user_permission"]');
+      const userId = input ? parseInt(input.value) : parseInt(li.dataset.userId);
+      const span = li.querySelector('.auth-label');
+
+      // Add/remove "(Authorized)" label
+      if (window.authorizedUsers?.includes(userId)) {
+        if (!span) {
+          const newSpan = document.createElement('span');
+          newSpan.className = 'auth-label';
+          newSpan.style.color = 'green';
+          newSpan.textContent = ' (Authorized)';
+          li.appendChild(newSpan);
+        }
+      } else if (span) {
+        span.remove();
+      }
+
+      // If host, also update checked status
+      if (input) {
+        input.checked = window.authorizedUsers?.includes(userId);
+      }
+    });
+  }
+
+  // Show/hide toolbar
   function updateToolbar() {
     const toolbar = document.getElementById('toolbar');
-    if (!toolbar) return;   // ← 避免 null 报错
+    const canvasWrap = document.getElementById('canvas-wrap');
+
+    if (!toolbar || !canvasWrap) return;
 
     if (window.permissionGranted || isHost) {
         toolbar.style.display = 'block';
+        canvasWrap.style.display = 'block'; // Show board
     } else {
         toolbar.style.display = 'none';
+        canvasWrap.style.display = 'none'; // Hide board
 
-        // 🚨 核心：普通用户失去权限 → 清空工具
         currentTool = null;
         tool = null;
-
-         // 🔥 核心：把鼠标样式重置
         const canvas = document.getElementById('board-canvas');
-        if (canvas) canvas.style.cursor = 'default';  // 或 'default'
+        if (canvas) canvas.style.cursor = 'default';
         
-        // 如果还有拖拽或文本输入，也可以取消
         drawing = false;
         panMode = false;
         currentPath = [];
         shapeStart = null;
     }
+
+    // --- Update user authorization labels ---
+    updateAuthorizedLabels();
   }
 
+  updateToolbar();  // Initial page render
+  updateAuthorizedLabels(); // Initial update of authorized labels
   setInterval(checkPermissions, permissionCheckInterval);
-  updateToolbar();  // 页面初始渲染
 
 
-  // === Canvas 初始化 ===
+  // --- Unified display of share notice ---
+  function showShareNotice(){
+      let shareDiv = document.getElementById('shareDiv');
+      if(!shareDiv){
+          shareDiv = document.createElement('div');
+          shareDiv.id = 'shareDiv';
+          shareDiv.innerHTML = `Someone started sharing their screen <button id="openShareBtn">Open</button>`;
+          shareDiv.style.position = 'fixed';
+          shareDiv.style.top = '10px';
+          shareDiv.style.right = '10px';
+          shareDiv.style.backgroundColor = '#fff';
+          shareDiv.style.padding = '10px';
+          shareDiv.style.border = '1px solid #888';
+          shareDiv.style.zIndex = 9999;
+          document.body.appendChild(shareDiv);
+
+          document.getElementById('openShareBtn').addEventListener('click', ()=>{
+              window.open(`/sharescreen/room/${BOARD_ID}/`, '_blank');
+              shareDiv.remove();
+          });
+      } else {
+          // If already exists, show it
+          shareDiv.style.display = 'block';
+      }
+  }
+
+  function hideShareNotice() {
+    const shareDiv = document.getElementById('shareDiv');
+    if(shareDiv) shareDiv.style.display = 'none';
+  }
+
+  // === Canvas Initialization ===
   const canvas = document.getElementById('board-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -80,21 +142,76 @@ document.addEventListener('DOMContentLoaded', () => {
   ctx.lineJoin = 'round';
 
   // === WebSocket ===
-  const socket = new WebSocket(`${location.protocol==='https:'?'wss':'ws'}://${location.host}/ws/board/${BOARD_ID}/`);
-
+  if (!window.socket) {
+    window.socket = new WebSocket(`${location.protocol==='https:'?'wss':'ws'}://${location.host}/ws/board/${BOARD_ID}/`);
+  }
   socket.onopen = () => console.log('✅ WebSocket connected');
   socket.onclose = () => console.warn('⚠️ WebSocket closed');
   socket.onerror = err => console.error('❌ WebSocket error', err);
   socket.onmessage = e => {
-    let msg;
-    try { msg = JSON.parse(e.data); } catch(err){ return; }
-    if(!msg||!msg.type) return;
+
+    let payload;
+    try { 
+        payload = JSON.parse(e.data); 
+    } catch(err){ 
+        console.error("❌ WebSocket JSON parse error", err, e.data);
+        return; 
+    }
+
+    let msg = payload;
+
+    if(payload.type === "board.message" && payload.message){
+        msg = payload.message; // 🔹 Use local variable
+        console.log("📤 Unpacked board.message:", msg);
+    }
+
+function updateOnlineDot(userList){
+    // 标准化 userList → 一组 id（字符串）
+    const idSet = new Set(userList.map(u => String(u.id)));
+
+    document.querySelectorAll("#room-user-list li").forEach(li => {
+        const uid = String(li.dataset.userId);
+        const dot = li.querySelector(".online-dot");
+        const radio = li.querySelector("input[type='radio']");
+
+        const isOnline = idSet.has(uid);
+
+        // 在线点
+        if (dot) dot.style.backgroundColor = isOnline ? "limegreen" : "gray";
+
+        // radio 绝不隐藏，只禁用（不可点）+ 不透明度调低
+        /*
+        if (radio) {
+            radio.disabled = !isOnline;
+            radio.style.opacity = isOnline ? "1" : "0.4";
+            radio.style.pointerEvents = isOnline ? "auto" : "none";
+        }
+        */
+    });
+}
+
+
+
+    if(msg.type === "user_list" && Array.isArray(msg.users)){
+      updateOnlineDot(msg.users);
+    }
 
     if(msg.type === "init_state") {
       undoStack.length=0; redoStack.length=0;
       const stateList = msg.state || [];
       for(const action of stateList) if(action) undoStack.push(action);
       redrawCanvas();
+      // If someone is already sharing screen
+      hideShareNotice(); // Hide first
+      if(msg.current_sharescreen && Number(msg.current_sharescreen) !== Number(user_id)){
+        console.log("msg.current_sharescreen:", msg.current_sharescreen); 
+        console.log("user_id:", user_id);  
+        
+        showShareNotice();
+      }else {
+            hideShareNotice();
+        }
+
     } else if(['path','erase','rect','circle','text','clear'].includes(msg.type)) {
       undoStack.push(msg); redrawCanvas();
     } else if(msg.type === 'pan') {
@@ -119,9 +236,31 @@ document.addEventListener('DOMContentLoaded', () => {
         redrawCanvas();
       }
     }
+    // === Handle Share Screen messages ===
+    if(msg.type === "sharescreen"){
+      console.log("🟡 Received sharescreen message!", msg);
+      // Avoid opening own window
+      if(Number(msg.sender) !== Number(user_id)){ 
+        console.log("msg.sender:", msg.sender);  
+        console.log("user_id:", user_id);   
+        showShareNotice();
+      } else if(msg.type === "stopsharescreen") {
+          hideShareNotice();
+      }
+    }
+    // ===== Video Sharing =====
+    if(msg.type === "share_video" || msg.type === "stop_share_video"){
+      handleIncomingVideo(msg);
+      return;
+    }
+    // Handle video sharing
+    if(msg.current_sharevideo && Number(msg.current_sharevideo.user_id) !== Number(user_id)){
+        showVideoPopup(msg.current_sharevideo.video_url);
+    }
+
   };
 
-  // --- 工具栏绑定 ---
+  // --- Toolbar bindings ---
   const colorPicker = document.getElementById('color-picker');
   const lineWidthInput = document.getElementById('line-width');
   if(colorPicker) colorPicker.addEventListener('input', e=> color = e.target.value);
@@ -140,6 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const zoomInBtn = document.getElementById('zoom-in-btn');
   const zoomOutBtn = document.getElementById('zoom-out-btn');
   const panBtn = document.getElementById('pan-btn');
+  const shareBtn = document.getElementById('btnShare');
+  const closeBtn = document.getElementById("btnCloseShare");
+  const videoShareBtn = document.getElementById("btnShareVideo");
 
   if(undoBtn) undoBtn.addEventListener('click', undo);
   if(redoBtn) redoBtn.addEventListener('click', redo);
@@ -160,19 +302,37 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   if(panBtn) panBtn.addEventListener('click', ()=> setTool('pan'));
+  
+  // === Share Screen event binding ===
+  if (shareBtn){
+    shareBtn.addEventListener("click", () => {
+      const shareUrl = `/sharescreen/room/${BOARD_ID}/`;
 
-  // --- 设置工具 ---
+      // Open own window
+      window.open(shareUrl, '_blank');
+
+      // Notify others
+      const payload = {type: "sharescreen", board_id: BOARD_ID};
+      if(socket.readyState === WebSocket.OPEN){
+          socket.send(JSON.stringify(payload));
+      } else {
+          socket.addEventListener("open", () => socket.send(JSON.stringify(payload)), {once:true});
+      }
+    });
+  }
+
+  
+  // --- Set Tool ---
   function setTool(t){
     if(tool==='pan' && t!=='pan') { panMode=false; canvas.style.cursor='default'; }
     tool=t;
     if(t==='pan'){ panMode=true; canvas.style.cursor='grab'; }
     else if(t==='pen'){ canvas.style.cursor='url("/static/icons/pen.png") 5 28, auto'; lineWidth=2; }
     else if(t==='eraser'){ canvas.style.cursor='url("/static/icons/eraser.png") 4 4, auto'; lineWidth=15; }
-    else if(t==='text'){ canvas.style.cursor='text'; canvas.addEventListener('click', createTextInput); }
     else{ canvas.style.cursor='crosshair'; }
   }
 
-  // --- 绘图函数 ---
+  // --- Drawing functions ---
   function drawPathOnContext(ctx, points, strokeColor, w, composite){
     if(!points||points.length===0) return;
     ctx.save();
@@ -228,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sendToSocket({type:'redo', action});
   }
 
-  // --- 鼠标事件 ---
+  // --- Mouse events ---
   let startX=0, startY=0;
   canvas.addEventListener('mousedown', e=>{
     if(tool==='pan'){ panMode=true; drawing=true; startX=e.clientX; startY=e.clientY; canvas.style.cursor='grabbing'; return; }
@@ -276,42 +436,200 @@ document.addEventListener('DOMContentLoaded', () => {
 
   canvas.addEventListener('mouseleave', ()=>{ if(drawing){drawing=false; currentPath=[]; shapeStart=null; canvas.style.cursor=tool==='pan'?'grab':'crosshair';} });
 
-  // --- 文本输入 ---
-  function createTextInput(e){
-    const rect=canvas.getBoundingClientRect();
-    const boardX=(e.clientX-rect.left-offsetX)/scale;
-    const boardY=(e.clientY-rect.top-offsetY)/scale;
-    const textarea=document.createElement('textarea');
-    textarea.style.position='absolute';
-    textarea.style.left=`${rect.left+(boardX*scale)+offsetX}px`;
-    textarea.style.top=`${rect.top+(boardY*scale)+offsetY}px`;
-    textarea.style.fontSize='16px'; textarea.style.padding='5px';
-    textarea.style.border='1px solid #888'; textarea.style.background='rgba(255,255,255,0.9)';
-    textarea.style.zIndex=9999; textarea.style.resize='both'; textarea.style.overflow='auto';
-    document.body.appendChild(textarea); textarea.focus();
-
-    let isDragging=false, offsetXDrag, offsetYDrag;
-    textarea.addEventListener('mousedown', ev=>{ isDragging=true; offsetXDrag=ev.clientX-textarea.offsetLeft; offsetYDrag=ev.clientY-textarea.offsetTop; document.addEventListener('mousemove', dragTextBox); document.addEventListener('mouseup', ()=>{isDragging=false; document.removeEventListener('mousemove', dragTextBox);}); });
-    function dragTextBox(ev){ if(isDragging){ textarea.style.left=`${ev.clientX-offsetXDrag}px`; textarea.style.top=`${ev.clientY-offsetYDrag}px`; } }
-    function submitTextInput(){ const textContent=textarea.value; textarea.remove(); undoStack.push({type:'text', data:{text:textContent}}); sendToSocket({type:'text', data:{text:textContent}}); renderTextToCanvas(textContent);}
-    textarea.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ev.preventDefault(); submitTextInput();} else if(ev.key==='Escape'){textarea.remove();} });
-    textarea.addEventListener('blur', submitTextInput);
-    canvas.removeEventListener('click', createTextInput);
-  }
-
-  function renderTextToCanvas(text){
-    const padding=10, fontSize=16, lineHeight=20;
-    ctx.save(); ctx.setTransform(scale,0,0,scale,offsetX,offsetY);
-    ctx.fillStyle='#000'; ctx.font=`${fontSize}px Arial`;
-    const words=text.split(/\s+/); let x=padding, y=padding+fontSize;
-    for(let word of words){
-      const testLine=word;
-      if(x+ctx.measureText(testLine).width>canvas.width-padding){ x=padding; y+=lineHeight; }
-      ctx.fillText(word,x,y); x+=ctx.measureText(word+' ').width;
-      if(y>canvas.height-padding) break;
-    }
-    ctx.restore();
-  }
-
   redrawCanvas();
+
+  // ---- Send video share message ----
+    function sendVideoShareMessage(video_url) {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'share_video',
+                video_url: video_url,
+                sender: user_id
+            }));
+        } else if (socket) {
+            socket.addEventListener("open", () => {
+                socket.send(JSON.stringify({
+                    type: 'share_video',
+                    video_url: video_url,
+                    sender: user_id
+                }));
+            }, { once: true });
+        }
+    }
+
+    // ====== Share Video Button ======
+    const shareVideoBtn = document.getElementById('btnShareVideo');
+    if (shareVideoBtn) {
+        shareVideoBtn.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'video/*';
+            input.click();
+
+            input.addEventListener('change', async () => {
+                const file = input.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('video', file);
+
+                try {
+                    const res = await fetch('/board/upload_temp_video/', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    if (!data.video_url) return alert('Upload failed');
+
+                    const videoURL = data.video_url;
+
+                    // 🔹 Local draggable window
+                    createVideoBox(videoURL);
+
+                    // 🔹 Notify other users
+                    sendVideoShareMessage(videoURL);
+
+                } catch (err) {
+                    console.error("Video upload failed", err);
+                    alert("Video upload failed, please try again");
+                }
+            });
+        });
+    }
+
+    // ===== WebSocket message handler =====
+    function handleIncomingVideo(msg) {
+        // Only show popup to other users
+        if (msg.type === "share_video" && msg.video_url && Number(msg.sender) !== Number(user_id)) {
+            console.log("WebSocket msg.type:", msg.type,);
+            console.log("WebSocket msg.video_url", msg.video_url);
+            console.log("WebSocket msg.sender:", msg.sender);
+            console.log("WebSocket user_id:",user_id);
+
+            showVideoPopup(msg.video_url);
+        }
+
+        if (msg.type === "stop_share_video" && msg.sender !== user_id) {
+            hideVideoPopup();
+        }
+    }
+    window.handleIncomingVideo = handleIncomingVideo;
+
+    // ================================  
+    //         Video Popup (viewer)  
+    // ================================
+    window.showVideoPopup = function(url) {
+        const popup = document.getElementById("videoPopup");
+        const video = document.getElementById("sharedVideo");
+        popup.style.display = "block";
+        video.src = url;
+        video.muted = true;  // Mute allows autoplay
+        video.play().catch(e => console.warn("Autoplay failed:", e));
+    }
+
+    window.hideVideoPopup = function() {
+        const popup = document.getElementById("videoPopup");
+        const video = document.getElementById("sharedVideo");
+        video.pause();
+        video.src = "";
+        popup.style.display = "none";
+    }
+
+    const popupCloseBtn = document.getElementById("videoPopupClose");
+    if (popupCloseBtn) {
+        popupCloseBtn.onclick = () => hideVideoPopup();
+    }
+
+    // ================================  
+    //         Draggable Video Window (host)  
+    // ================================
+    function createVideoBox(videoURL) {
+        const videoDiv = document.createElement('div');
+        videoDiv.style.position = 'fixed';
+        videoDiv.style.top = '50px';
+        videoDiv.style.left = '50px';
+        videoDiv.style.width = '400px';
+        videoDiv.style.height = '300px';
+        videoDiv.style.border = '2px solid #333';
+        videoDiv.style.backgroundColor = '#000';
+        videoDiv.style.zIndex = 9999;
+        videoDiv.style.resize = 'both';
+        videoDiv.style.overflow = 'hidden';
+        videoDiv.style.display = 'flex';
+        videoDiv.style.flexDirection = 'column';
+
+        // ===== Title Bar =====
+        const titleBar = document.createElement('div');
+        titleBar.style.height = '28px';
+        titleBar.style.background = '#222';
+        titleBar.style.color = '#fff';
+        titleBar.style.display = 'flex';
+        titleBar.style.alignItems = 'center';
+        titleBar.style.padding = '0 10px';
+        titleBar.style.cursor = 'move';
+        titleBar.textContent = "Shared Video";
+        videoDiv.appendChild(titleBar);
+
+        // ===== Video =====
+        const video = document.createElement('video');
+        video.src = videoURL;
+        video.controls = true;
+        video.autoplay = true;
+        video.muted = true; // 🔹 Mute allows autoplay
+        video.style.width = '100%';
+        video.style.height = 'calc(100% - 28px)';
+        videoDiv.appendChild(video);
+
+        // ===== Close Button =====
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '❌';
+        closeBtn.style.position = 'absolute';
+        closeBtn.style.top = '2px';
+        closeBtn.style.right = '4px';
+        closeBtn.style.background = 'transparent';
+        closeBtn.style.border = 'none';
+        closeBtn.style.color = 'white';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.addEventListener('click', () => {
+            videoDiv.remove();
+            stopSharingVideo(); // 🔹 Notify others
+        });
+        videoDiv.appendChild(closeBtn);
+
+        document.body.appendChild(videoDiv);
+
+        // Drag binding to title bar
+        makeDraggable(videoDiv, titleBar);
+    }
+
+    function makeDraggable(box, handle) {
+        let dragging = false, offsetX = 0, offsetY = 0;
+
+        handle.addEventListener("mousedown", (e) => {
+            dragging = true;
+            offsetX = e.clientX - box.offsetLeft;
+            offsetY = e.clientY - box.offsetTop;
+            document.addEventListener("mousemove", move);
+            document.addEventListener("mouseup", stop);
+        });
+
+        function move(e) {
+            if (!dragging) return;
+            box.style.left = (e.clientX - offsetX) + "px";
+            box.style.top  = (e.clientY - offsetY) + "px";
+        }
+
+        function stop() {
+            dragging = false;
+            document.removeEventListener("mousemove", move);
+            document.removeEventListener("mouseup", stop);
+        }
+    }
+
+    // ===== Stop sharing video, notify others =====
+    async function stopSharingVideo() {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: "stop_share_video", sender: user_id }));
+        }
+    }
 });
