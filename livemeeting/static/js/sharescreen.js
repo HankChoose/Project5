@@ -168,6 +168,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (shareBtn) {
         shareBtn.style.display = isOwner ? "block" : "none";
         shareBtn.addEventListener("click", async () => {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                alert("📱 请到电脑上共享屏幕");
+                return;
+            }
             if (!isOwner) return alert("你不是共享者");
             try {
                 localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
