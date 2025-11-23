@@ -478,6 +478,38 @@ function getAdjustedLineWidth(baseWidth){
     return Math.max(1, baseWidth / scale / dpr);
 }
 
+// ---- Undo / Redo / Clear helpers ----
+function mobileUndo() {
+    if (undoStack.length === 0) return;
+    const last = undoStack.pop();
+    redoStack.push(last);
+    redrawCanvas();
+    sendToSocket({ type: 'undo' });
+}
+
+function mobileRedo() {
+    if (redoStack.length === 0) return;
+    const last = redoStack.pop();
+    undoStack.push(last);
+    redrawCanvas();
+    sendToSocket({ type: 'redo' });
+}
+
+function mobileClear() {
+    undoStack.length = 0;
+    redoStack.length = 0;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    offsetX = 0;
+    offsetY = 0;
+    scale = 1;
+    sendToSocket({ type: 'clear' });
+}
+
+// 可以绑定到按钮
+document.getElementById('undoBtn')?.addEventListener('click', mobileUndo);
+document.getElementById('redoBtn')?.addEventListener('click', mobileRedo);
+document.getElementById('clearBtn')?.addEventListener('click', mobileClear);
+
 // Touch Start
 canvas.addEventListener('touchstart', e => {
     e.preventDefault();
@@ -522,11 +554,9 @@ canvas.addEventListener('touchmove', e => {
     e.preventDefault();
 
     if(pinchZoom && e.touches.length === 2){
-        // Pinch zoom + smooth center
         const newDist = getDistance(e.touches);
         const newScale = lastScale * (newDist / startDist);
 
-        // 保持缩放中心不动
         offsetX -= pinchOffset.x * (newScale - scale);
         offsetY -= pinchOffset.y * (newScale - scale);
 
@@ -538,6 +568,7 @@ canvas.addEventListener('touchmove', e => {
 
     if (!drawing) return;
     const pos = getTouchPos(e);
+    const adjustedLineWidth = getAdjustedLineWidth(lineWidth);
 
     if (panMode && tool === 'pan') {
         const dx = e.touches[0].clientX - startX;
@@ -550,8 +581,6 @@ canvas.addEventListener('touchmove', e => {
         sendToSocket({ type: 'pan', data: { offsetX, offsetY, scale } });
         return;
     }
-
-    const adjustedLineWidth = getAdjustedLineWidth(lineWidth);
 
     if (tool === 'pen') {
         currentPath.push(pos);
@@ -598,7 +627,6 @@ canvas.addEventListener('touchend', e => {
     e.preventDefault();
 
     if(e.touches.length < 2) pinchZoom = false;
-
     if (!drawing) return;
     drawing = false;
 
@@ -646,7 +674,6 @@ canvas.addEventListener('touchend', e => {
 });
 
 // --- Mobile touch support end ---
-
 
 
   redrawCanvas();
