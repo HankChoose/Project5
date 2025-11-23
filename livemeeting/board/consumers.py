@@ -9,14 +9,14 @@ class BoardConsumer(AsyncWebsocketConsumer):
         self.group_name = f"board_{self.board_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
-        print(f"✅ 用户连接 WebSocket，加入 group: {self.group_name} | channel: {self.channel_name}")
-        # 初始化状态
+        print(f"The user connects via WebSocket and joins the group.: {self.group_name} | channel: {self.channel_name}")
+        # Initialization state
         board_state = await self.get_board_state()
-        current_sharescreen = await self.get_current_sharescreen()  # ✅ 获取当前共享用户ID
+        current_sharescreen = await self.get_current_sharescreen()  # Get current shared screen user ID
         await self.send(text_data=json.dumps({
             "type": "init_state",
             "state": board_state,
-            "current_sharescreen": current_sharescreen   # ✅ 加上这里
+            "current_sharescreen": current_sharescreen 
         }))
 
         current_sharevideo = await self.get_current_sharevideo()
@@ -24,10 +24,10 @@ class BoardConsumer(AsyncWebsocketConsumer):
             "type": "init_state",
             "state": board_state,
             "current_sharescreen": current_sharescreen,
-            "current_sharevideo": current_sharevideo  # 🔹 新增
+            "current_sharevideo": current_sharevideo 
         }))
 
-    # ========== 用户加入在线列表 ==========
+    # ========== Add user to online list ==========
         user_id = self.scope["user"].id
         user_ids = await self.add_user(user_id)
         user_info = await self.get_user_info(user_ids)
@@ -42,7 +42,7 @@ class BoardConsumer(AsyncWebsocketConsumer):
             }
         )
 
-        # 2️⃣ 直接发送给自己，确保自己的绿点立即显示
+        # Send directly to self to ensure own green dot shows immediately
         await self.send(text_data=json.dumps({
             "type": "user_list",
             "users": user_info
@@ -50,19 +50,19 @@ class BoardConsumer(AsyncWebsocketConsumer):
 
 
     async def disconnect(self, close_code):
-        # 先移出 group
+        # Remove from group first
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
-        print(f"❌ 用户断开 WebSocket，离开 group: {self.group_name} | channel: {self.channel_name}")
+        print(f"❌ The user disconnected the WebSocket and left the group.: {self.group_name} | channel: {self.channel_name}")
 
-        # 检查是否是当前共享屏幕的用户
+        # Check if it is the user currently sharing the screen.
         current_sharer = await self.get_current_sharescreen()
         user_id = self.scope["user"].id
         if current_sharer == user_id:
-            # 清空数据库字段
+            # Clear database fields
             await self.clear_current_sharescreen()
-            print(f"➡️ 用户 {user_id} 断开，清空 current_sharescreen")
+            print(f"User {user_id} disconnected, cleared. current_sharescreen")
 
-            # 广播给组里的其他人：共享结束
+            # Broadcast to the rest of the group: Sharing ended
             await self.channel_layer.group_send(
                 self.group_name,
                 {
@@ -74,7 +74,7 @@ class BoardConsumer(AsyncWebsocketConsumer):
                 }
             )
 
-        # ========== 用户离开在线列表 ==========
+        # ========== User leaves online list ==========
         user_id = self.scope["user"].id
         user_ids = await self.remove_user(user_id)
         user_info = await self.get_user_info(user_ids)
@@ -95,12 +95,12 @@ class BoardConsumer(AsyncWebsocketConsumer):
         if data.get("type") not in allowed_types:
             return
         
-        # ========= sharescreen：广播 and 存数据库 =========
+        # ========= sharescreen：Broadcast and database storage =========
         if data["type"] == "sharescreen":
             user_id = self.scope["user"].id
-            # 保存到数据库
+            # Save to database
             await self.set_current_sharescreen(user_id)
-            print(f"➡️ sharescreen 消息准备广播: {data}")
+            print(f"➡️ sharescreen Message ready for broadcast: {data}")
             await self.channel_layer.group_send(
                 self.group_name,
                 {
@@ -119,7 +119,7 @@ class BoardConsumer(AsyncWebsocketConsumer):
             user_id = self.scope["user"].id
             video_url = data["video_url"]
             await self.set_current_sharevideo(user_id, video_url)
-            print(f"➡️ share_video 消息准备广播: {data}")
+            print(f"➡️ share_video message ready for broadcast: {data}")
             await self.channel_layer.group_send(
                 self.group_name,
                 {
@@ -160,7 +160,7 @@ class BoardConsumer(AsyncWebsocketConsumer):
             )
             return
         
-        # 广播消息给组内其他用户
+        # Broadcast messages to other users in the group
         await self.channel_layer.group_send(
             self.group_name,
             {
@@ -169,7 +169,7 @@ class BoardConsumer(AsyncWebsocketConsumer):
             }
         )
 
-        # 数据库同步
+        # Database synchronization
         if data["type"] in ["undo", "redo"]:
             action = data.get("action")
             await self.apply_undo_redo(data["type"], action)
@@ -185,10 +185,10 @@ class BoardConsumer(AsyncWebsocketConsumer):
             "type": "board.message",
             "message": event["message"]
         }
-        print(f"📢 广播给 group {self.group_name}: {payload}")
+        print(f"📢 Broadcast to group {self.group_name}: {payload}")
         await self.send(text_data=json.dumps(payload))
 
-    # ================= 数据库操作 =================
+    # ================= Database operations =================
     @database_sync_to_async
     def get_board_state(self):
         board = Board.objects.get(id=self.board_id)
@@ -206,7 +206,7 @@ class BoardConsumer(AsyncWebsocketConsumer):
     def save_pan(self, action):
         board = Board.objects.get(id=self.board_id)
         state = board.state or []
-        # 移除旧 pan
+
         state = [a for a in state if a.get("type") != "pan"]
         state.append(action)
         board.state = state
@@ -236,7 +236,7 @@ class BoardConsumer(AsyncWebsocketConsumer):
                 await database_sync_to_async(board.save)()
                 return action
 
-    # ================= share screen 操作 =================        
+    # ================= share screen =================        
     @database_sync_to_async
     def set_current_sharescreen(self, user_id):
         board = Board.objects.get(id=self.board_id)
@@ -261,7 +261,7 @@ class BoardConsumer(AsyncWebsocketConsumer):
         board.current_sharescreen = None
         board.save()
 
-    # ================= share video 数据库操作 =================
+    # ================= share video =================
     @database_sync_to_async
     def set_current_sharevideo(self, user_id, video_url):
         board = Board.objects.get(id=self.board_id)
@@ -298,7 +298,7 @@ class BoardConsumer(AsyncWebsocketConsumer):
             }
         return None
 
-    # ========== 在线用户管理（全局字典） ==========
+    # ========== Online User Management (Global Dictionary) ==========
     ONLINE_USERS = {}  # board_id → set(user_ids)
 
     @classmethod

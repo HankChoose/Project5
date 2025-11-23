@@ -10,16 +10,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('chat-input');
   const sendBtn = document.getElementById('send-btn');
 
-  // 接收消息
+  // Receive message
   socket.onmessage = (e) => {
     const data = JSON.parse(e.data);
     const div = document.createElement('div');
     div.innerText = `[${data.timestamp || ''}] ${data.user || 'guest'}: ${data.message || ''}`;
     messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;  // 自动滚动
+    messages.scrollTop = messages.scrollHeight;  // Automatic scrolling
   };
 
-  // 发送消息
+  // Send message
   function sendMessage() {
     const message = input.value.trim();
     if (!message) return;

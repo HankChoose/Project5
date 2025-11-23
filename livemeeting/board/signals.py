@@ -9,9 +9,9 @@ from .models import Board
 def create_board_on_login(sender, instance, created, **kwargs):
     """每次用户登录时检查并创建默认的 Board"""
     if not Board.objects.filter(created_by=instance).exists():
-        # 如果用户没有 Board，则创建一个新的 Board
+      
         Board.objects.create(
             name=f"{instance.username}'s Default Board",
             created_by=instance,
-            max_boards=1  # 每个用户最多一个 Board
+            max_boards=1 
         )

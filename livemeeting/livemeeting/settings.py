@@ -27,7 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-# CSRF 信任的来源（注意 https:// 前缀必须加上）
+
 CSRF_TRUSTED_ORIGINS = [
     'https://hankbeststar.com',
     'https://www.hankbeststar.com',
@@ -138,13 +138,13 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# channels layer 配置
+# channels layer 
 CHANNEL_LAYERS = {
     "default": {
-        # 开发测试可以用 InMemory
+        # InMemory can be used for development and testing.
         "BACKEND": "channels.layers.InMemoryChannelLayer",
 
-        # 生产环境推荐 Redis
+        # Recommended production environment Redis
         # "BACKEND": "channels_redis.core.RedisChannelLayer",
         # "CONFIG": {
         #     "hosts": [("127.0.0.1", 6379)],
@@ -152,7 +152,7 @@ CHANNEL_LAYERS = {
     }
 }
 
-LOGIN_URL = '/'  # 或者你定义的登录页面 URL
+LOGIN_URL = '/'  # Or the login page URL defined.
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 import os

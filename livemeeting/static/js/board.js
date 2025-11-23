@@ -162,11 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if(payload.type === "board.message" && payload.message){
         msg = payload.message; // 🔹 Use local variable
-        console.log("📤 Unpacked board.message:", msg);
+        //console.log("📤 Unpacked board.message:", msg);
     }
 
 function updateOnlineDot(userList){
-    // 标准化 userList → 一组 id（字符串）
+    // Normalize userList → a set of IDs (strings)
     const idSet = new Set(userList.map(u => String(u.id)));
 
     document.querySelectorAll("#room-user-list li").forEach(li => {
@@ -176,17 +176,16 @@ function updateOnlineDot(userList){
 
         const isOnline = idSet.has(uid);
 
-        // 在线点
         if (dot) dot.style.backgroundColor = isOnline ? "limegreen" : "gray";
 
-        // radio 绝不隐藏，只禁用（不可点）+ 不透明度调低
-        /*
+        // radio Never hide, only disable (unclickable) + lower opacity
+       
         if (radio) {
             radio.disabled = !isOnline;
             radio.style.opacity = isOnline ? "1" : "0.4";
             radio.style.pointerEvents = isOnline ? "auto" : "none";
         }
-        */
+       
     });
 }
 
@@ -212,7 +211,7 @@ function updateOnlineDot(userList){
             hideShareNotice();
         }
 
-    } else if(['path','erase','rect','circle','text','clear'].includes(msg.type)) {
+    } else if(['path','erase','rect','circle','clear'].includes(msg.type)) {
       undoStack.push(msg); redrawCanvas();
     } else if(msg.type === 'pan') {
       if(msg.data) {
@@ -331,7 +330,7 @@ function updateOnlineDot(userList){
     else if(t==='eraser'){ canvas.style.cursor='url("/static/icons/eraser.png") 4 4, auto'; lineWidth=15; }
     else if(t==='rect' || t==='circle'){ 
         canvas.style.cursor='crosshair'; 
-        lineWidth = 2; // 🔹 给矩形和圆设置默认线宽
+        lineWidth = 2; // Set default line width for rectangles and circles
     }
   }
 
@@ -439,11 +438,10 @@ function updateOnlineDot(userList){
 
   canvas.addEventListener('mouseleave', ()=>{ if(drawing){drawing=false; currentPath=[]; shapeStart=null; canvas.style.cursor=tool==='pan'?'grab':'crosshair';} });
   
-  // =========================
-// --- 手机触摸支持 start ---
-// =========================
 
-// 获取触摸坐标
+// --- Mobile touch support start ---
+
+// Get touch coordinates
 function getTouchPos(e) {
     const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0] || e.changedTouches[0];
@@ -453,11 +451,11 @@ function getTouchPos(e) {
     };
 }
 
-// 触摸开始
+// Touch Start
 canvas.addEventListener('touchstart', e => {
     e.preventDefault();
     const pos = getTouchPos(e);
-    if (tool === 'pan') { // 平移
+    if (tool === 'pan') {
         panMode = true;
         drawing = true;
         startX = e.touches[0].clientX;
@@ -473,7 +471,7 @@ canvas.addEventListener('touchstart', e => {
     else if (tool === 'rect' || tool === 'circle') shapeStart = pos;
 });
 
-// 触摸移动
+// Touch to move
 canvas.addEventListener('touchmove', e => {
     e.preventDefault();
     if (!drawing) return;
@@ -531,7 +529,7 @@ canvas.addEventListener('touchmove', e => {
     }
 });
 
-// 触摸结束
+// Touch End
 canvas.addEventListener('touchend', e => {
     e.preventDefault();
     if (!drawing) return;
@@ -577,9 +575,8 @@ canvas.addEventListener('touchend', e => {
     }
 });
 
-// =========================
-// --- 手机触摸支持 end ---
-// =========================
+// --- Mobile touch support end ---
+
 
   redrawCanvas();
 

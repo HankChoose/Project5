@@ -9,7 +9,7 @@
     <div class="panel-section">
       <ul id="room-user-list">
 
-          <!-- 先渲染 Room Owner -->
+          <!-- Render Room Owner First -->
           {% if board.created_by %}
             <li data-user-id="{{ board.created_by.id }}">
               <span class="online-dot"
@@ -20,7 +20,7 @@
             </li>
           {% endif %}
 
-          <!-- 再渲染其它普通用户 -->
+          <!-- Render Other Regular Users -->
           {% for u in board.users.all %}
             {% if u != board.created_by %}
               <li data-user-id="{{ u.id }}">
@@ -152,15 +152,6 @@
     }
   }
 </script>
-<script defer>
-  window.addEventListener('load', () => {
-    if (typeof pdfjsLib !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.165/pdf.worker.min.js';
-    } else {
-      console.error('PDF.js failed to load');
-    }
-  });
-</script>
 
 <script src="/static/js/chat.js" defer></script>
 <script src="/static/js/board.js" defer></script>
@@ -170,7 +161,7 @@ const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/
 if (isMobile) {
     const btnShare = document.getElementById('btnShare');
     if (btnShare) {
-        btnShare.style.display = 'none'; // 隐藏按钮
+        btnShare.style.display = 'none'; // Hide button
     }
 }
 </script>

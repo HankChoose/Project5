@@ -11,11 +11,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.group_name = f"chat_{self.room_name}"
 
-        # 加入组
+        # Join group
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
-        # 发送历史消息
+        # Send chat history
         messages = await self.get_history()
         for msg in messages:
             await self.send(text_data=json.dumps(msg))
@@ -30,10 +30,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         user = self.scope['user']
-        # 保存消息到数据库
+        # Save message to database
         message_obj = await self.save_message(user, content)
 
-        # 广播消息给组内所有人
+        # Broadcast message to all users in the group
         await self.channel_layer.group_send(
             self.group_name,
             {
@@ -45,7 +45,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def chat_message(self, event):
-        # 发送给当前客户端
+        # Send to current client
         await self.send(text_data=json.dumps({
             "user": event["user"],
             "message": event["message"],
@@ -64,9 +64,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_history(self):
         room, _ = ChatRoom.objects.get_or_create(name=self.room_name)
-        # 使用 select_related 避免 lazy load 导致 async 报错
+        # Use select_related to avoid lazy load causing async errors
         messages = room.messages.select_related('user').order_by('timestamp').all()
-        # 转成 dict，方便 async context 发送
+        # Convert to dict for sending in async context
         return [
             {
                 "user": msg.user.username if msg.user else "guest",

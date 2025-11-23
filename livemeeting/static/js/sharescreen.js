@@ -14,26 +14,26 @@ ws.onclose = () => console.log("🔴 WebSocket disconnected");
 
 ws.onmessage = async (event) => {
     const data = JSON.parse(event.data);
-    console.log("📩 收到 WebSocket 消息:", data);
+    console.log("📩 Received WebSocket message:", data);
 
     if (data.type === "role") {
-        console.log("✅ 你的身份:", data.role);
+        console.log("✅ Your role:", data.role);
         isOwner = data.role === "owner";
         if (isOwner) setupOwner();
         else setupViewer();
     }
-    // === 控制界面显示 ===
+    // === Control UI display ===
     document.getElementById("ownerVideoContainer").style.display = isOwner ? "block" : "none";
     document.getElementById("viewerVideoContainer").style.display = isOwner ? "none" : "block";
     
-    // === viewer 端自动全屏 ===
+    // === viewer auto fullscreen ===
     if (!isOwner) {
         const remoteVideo = document.getElementById("remoteVideo");
-        // 延迟尝试进入全屏
+        // Delayed attempt to fullscreen
         /*
         setTimeout(() => {
             if (remoteVideo.requestFullscreen) {
-                remoteVideo.requestFullscreen().catch(err => console.warn("全屏失败:", err));
+                remoteVideo.requestFullscreen().catch(err => console.warn("Fullscreen failed:", err));
             }
         }, 1500);
         */
@@ -42,13 +42,13 @@ ws.onmessage = async (event) => {
     if (!isOwner && data.type === "answer") {
         const remoteVideo = document.getElementById("remoteVideo");
         if (remoteVideo.srcObject) {
-            remoteVideo.play().catch(err => console.warn("answer 后 play 失败:", err));
+            remoteVideo.play().catch(err => console.warn("Play after answer failed:", err));
         }
 }
 
 
     if (data.type === "owner_left") {
-        alert("📴 主播已离开，屏幕共享结束");
+        alert("📴 The host has left, screen sharing ended");
         document.getElementById("remoteVideo").srcObject = null;
     }
 
@@ -57,7 +57,7 @@ ws.onmessage = async (event) => {
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         ws.send(JSON.stringify({ type: "answer", answer: answer }));
-        console.log("📤 已发送 answer:", answer);
+        console.log("📤 Answer sent:", answer);
     }
 
     if (data.type === "answer" && isOwner) {
@@ -73,9 +73,9 @@ ws.onmessage = async (event) => {
     }
 };
 
-// ================= 清除旧连接 ==================
+// ================= Clear old connections ==================
 window.addEventListener("beforeunload", () => {
-    console.log("🧹 页面卸载，清理连接");
+    console.log("🧹 Page unloading, cleaning up connections");
     try {
         if (pc) {
             pc.close();
@@ -89,13 +89,13 @@ window.addEventListener("beforeunload", () => {
             ws.close(1000, "Page closed");
         }
     } catch (err) {
-        console.warn("清理失败:", err);
+        console.warn("Cleanup failed:", err);
     }
 });
-// ===============================================
+// =========================================================
 
 async function setupOwner() {
-    // 每次刷新或重连时，重新创建干净的 peer
+    // Recreate a clean peer each time on refresh or reconnect
     if (pc) { try { pc.close(); } catch (e) {} }
     pc = createPeerConnection();
 
@@ -104,9 +104,9 @@ async function setupOwner() {
         const localVideo = document.getElementById("localVideo");
         localVideo.srcObject = localStream;
         localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-        console.log("🎥 本地屏幕流已获取");
+        console.log("🎥 Local screen stream acquired");
     } catch (err) {
-        console.error("❌ 获取屏幕流失败:", err);
+        console.error("❌ Failed to get screen stream:", err);
     }
 }
 
@@ -115,18 +115,18 @@ function setupViewer() {
     pc = createPeerConnection();
     
     const remoteVideo = document.getElementById("remoteVideo");
-    remoteVideo.srcObject = null;       // 清理旧流
+    remoteVideo.srcObject = null;       // Clear old stream
     remoteVideo.autoplay = true;
     remoteVideo.playsInline = true;
-    remoteVideo.muted = true;           // 静音才能自动播放
+    remoteVideo.muted = true;           // Must be muted to autoplay
 
     pc.ontrack = (event) => {
-        console.log("🎥 收到远程流");
+        console.log("🎥 Remote stream received");
         remoteVideo.srcObject = event.streams[0];
 
-        // 尝试播放
+        // Attempt to play
         remoteVideo.onloadedmetadata = () => {
-            remoteVideo.play().catch(err => console.warn("静音自动播放失败:", err));
+            remoteVideo.play().catch(err => console.warn("Muted autoplay failed:", err));
         };
     };
 }
@@ -144,9 +144,9 @@ function createPeerConnection() {
     };
 
     pc.onconnectionstatechange = () => {
-        console.log("🔄 连接状态变化:", pc.connectionState);
+        console.log("🔄 Connection state changed:", pc.connectionState);
         if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
-            console.log("⚠️ 连接关闭或失败，准备清理");
+            console.log("⚠️ Connection closed or failed, cleaning up");
             try { pc.close(); } catch (e) {}
         }
     };
@@ -159,16 +159,16 @@ async function sendOfferToViewer(viewerId) {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     ws.send(JSON.stringify({ type: "offer", offer: offer, target: viewerId }));
-    console.log("📤 已发送 offer 给 viewer:", viewerId);
+    console.log("📤 Offer sent to viewer:", viewerId);
 }
 
-// 页面按钮事件
+// Page button events
 document.addEventListener("DOMContentLoaded", () => {
     const shareBtn = document.getElementById("startBtn");
     if (shareBtn) {
         shareBtn.style.display = isOwner ? "block" : "none";
         shareBtn.addEventListener("click", async () => {
-            if (!isOwner) return alert("你不是共享者");
+            if (!isOwner) return alert("You are not the sharer");
             try {
                 localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
                 document.getElementById("localVideo").srcObject = localStream;
@@ -176,9 +176,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 ws.send(JSON.stringify({ type: "offer", offer: offer }));
-                console.log("📤 已发送 offer 给所有 viewer:", offer);
+                console.log("📤 Offer sent to all viewers:", offer);
             } catch (err) {
-                console.error("❌ 屏幕共享失败:", err);
+                console.error("❌ Screen sharing failed:", err);
             }
         });
     }

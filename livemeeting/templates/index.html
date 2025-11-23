@@ -28,49 +28,49 @@
     <div>Live Meeting</div>
     <div>
         {% if user.is_authenticated %}
-            欢迎 {{ user.username }} | <a href="?logout=1">登出</a>
+            Welcome {{ user.username }} | <a href="?logout=1">Logout</a>
         {% else %}
-            <a href="#login" onclick="showTab('login')">登录</a> | <a href="#register" onclick="showTab('register')">注册</a>
+            <a href="#login" onclick="showTab('login')">Login</a> | <a href="#register" onclick="showTab('register')">Register</a>
         {% endif %}
     </div>
 </header>
 
 <div class="container">
     {% if not user.is_authenticated %}
-        <!-- Tab 头部 -->
+        <!-- Tab header -->
         <div class="tabs">
-            <div id="tab-login" class="tab {% if tab == 'login' %}active{% endif %}" onclick="showTab('login')">登录</div>
-            <div id="tab-register" class="tab {% if tab == 'register' %}active{% endif %}" onclick="showTab('register')">注册</div>
+            <div id="tab-login" class="tab {% if tab == 'login' %}active{% endif %}" onclick="showTab('login')">Login</div>
+            <div id="tab-register" class="tab {% if tab == 'register' %}active{% endif %}" onclick="showTab('register')">Register</div>
         </div>
 
-        <!-- 登录表单 -->
+        <!-- Login form -->
         <div id="login-form" class="form-tab {% if tab == 'login' %}active{% endif %}">
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="login">
                 <input type="hidden" name="next" value="{{ next_url|default:'' }}">
-                <input type="text" name="username" placeholder="用户名" required>
-                <input type="password" name="password" placeholder="密码" required>
-                <button type="submit">登录</button>
+                <input type="text" name="username" placeholder="Username" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <button type="submit">Login</button>
             </form>
-            <p>没有账户？<a href="#" onclick="showTab('register')">请注册</a></p>
+            <p>No account? <a href="#" onclick="showTab('register')">Register here</a></p>
         </div>
 
-        <!-- 注册表单 -->
+        <!-- Register form -->
         <div id="register-form" class="form-tab {% if tab == 'register' %}active{% endif %}">
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="register">
-                <input type="text" name="username" placeholder="用户名" required>
-                <input type="password" name="password" placeholder="密码" required>
-                <input type="password" name="confirm" placeholder="确认密码" required>
-                <button type="submit">注册</button>
+                <input type="text" name="username" placeholder="Username" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <input type="password" name="confirm" placeholder="Confirm Password" required>
+                <button type="submit">Register</button>
                 <p>Already have an account? <a href="#" onclick="showTab('login')">Login</a></p>
             </form>
         </div>
     {% endif %}
 
-    <!-- 消息显示 -->
+    <!-- Message display -->
     <div class="messages">
         {% for message in messages %}
             <p>{{ message }}</p>

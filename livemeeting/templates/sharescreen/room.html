@@ -6,22 +6,21 @@
 {% block content %}
 <h2>Live Screen Sharing: {{ room_name }}</h2>
 
-<!-- 屏幕共享者 -->
+<!-- Screen sharing -->
 <div id="ownerVideoContainer" style="display:none;">
   <video id="localVideo" autoplay muted style="width:800px;border:2px solid #666;border-radius:8px;"></video>
-  <p>🧑‍💻 你正在共享屏幕</p>
+  <p>🧑‍💻 You are sharing your screen</p>
 </div>
 
-<!-- 观看者 -->
+<!-- Viewers -->
 <div id="viewerVideoContainer" style="display:none;">
   <video id="remoteVideo" autoplay style="width:800px;border:2px solid #333;border-radius:8px;"></video>
-  <p>👀 你正在观看共享屏幕</p>
+  <p>👀 You are watching a screen sharing session.</p>
 </div>
-<!-- 在模板里定义 roomName -->
+
 <script>
-    const ROOM_NAME = "{{ room_name }}";  // 注意全大写表示全局常量
+    const ROOM_NAME = "{{ room_name }}"; 
 </script>
 
-<!-- 引入独立 JS -->
 <script type="module" src="{% static 'js/sharescreen.js' %}"></script>
 {% endblock %}

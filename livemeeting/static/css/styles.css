@@ -1,4 +1,4 @@
-/* === 全局样式 === */
+/* === Global Styles === */
 body {
   font-family: Arial, sans-serif;
   margin: 0;
@@ -24,22 +24,22 @@ main {
   padding: 1rem;
 }
 
-/* === 主容器 === */
+/* === Main Container === */
 #main-board-container {
   display: flex;
-  flex-direction: row;  /* 左右排列 */
+  flex-direction: row;  /* Arrange left and right */
   gap: 20px;
   padding: 20px;
   align-items: flex-start;
 }
 
-/* === 左侧面板 === */
+/* === Left Panel === */
 #left-panel {
   width: 250px;
   padding: 12px;
   border-right: 1px solid #e0e0e0;
   box-sizing: border-box;
-  margin-left: -20px;  /* 负值使其向左移动 */
+  margin-left: -20px;  /* Negative value moves it to the left */
 }
 
 .panel-section {
@@ -70,15 +70,15 @@ main {
   color: #007bff;
 }
 
-/* === 右侧区域 === */
+/* === Right Area === */
 #right-panel {
-  flex-grow: 1;  /* 右侧区域自适应宽度 */
+  flex-grow: 1;  /* Right area auto width */
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* === 白板区域 === */
+/* === Board Area === */
 #board-area {
   display: flex;
   flex-direction: column;
@@ -93,8 +93,8 @@ main {
 
 #toolbar {
   display: flex;
-  flex-direction: column; /* 垂直排列两排 */
-  gap: 6px;               /* 两排之间的间距 */
+  flex-direction: column; /* Vertical two rows */
+  gap: 6px;               /* Gap between rows */
   padding: 6px 8px;
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -103,11 +103,11 @@ main {
   box-sizing: border-box;
 }
 
-/* 每一排内部水平排列按钮 */
+/* Each row buttons horizontally arranged */
 .toolbar-row {
   display: flex;
-  flex-wrap: wrap;  /* 小屏幕自动换行 */
-  gap: 6px;         /* 按钮间距 */
+  flex-wrap: wrap;  /* Wrap on small screens */
+  gap: 6px;         /* Button gap */
   align-items: center;
 }
 
@@ -122,7 +122,7 @@ main {
   border: 1px solid #ccc;
 }
 
-/* === 聊天区域 === */
+/* === Chat Area === */
 #chat-area {
   display: flex;
   flex-direction: column;
@@ -175,9 +175,9 @@ main {
   cursor: pointer;
 }
 
-/* 统一按钮样式 */
+/* Unified button styles */
 .btn-primary-custom {
-    width: 100%;           /* 占满父容器宽度 */
+    width: 100%;           /* Fill parent width */
     padding: 10px;
     margin-top: 10px;
     background-color: #0b5ed7;
@@ -191,5 +191,5 @@ main {
     background-color: #0a53be;
 }
 .btn-primary-custom:active {
-    background-color: #084298;  /* 点击深蓝 */
+    background-color: #084298;  /* Dark blue on click */
 }

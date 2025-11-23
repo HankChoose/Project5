@@ -24,7 +24,7 @@ class ShareScreenConsumer(AsyncWebsocketConsumer):
             self.is_owner = False
             rooms[self.room_name]['viewers'].add(self.channel_name)
             await self.send(json.dumps({'type': 'role', 'role': 'viewer'}))
-            # 通知 owner
+            # Info owner
             owner_channel = rooms[self.room_name]['owner']
             if owner_channel:
                 await self.channel_layer.send(owner_channel, {

@@ -6,10 +6,11 @@ LiveMeeting is a Django-based web application that allows users to collaborate o
 
 - User registration and login
 - Create and join collaborative whiteboard rooms
-- Multi-user permissions and roles: 
-    - Room owners can grant or revoke access to participants
+- Multi-user Permissions and Status: 
+    - Room owners can grant or revoke access for participants
     - Participants’ abilities (draw, edit, view, share screen, or share video) are controlled via the toolbar
-- Draw, move, and connect nodes on a whiteboard
+    - Join or leave the room in real time
+- Draw, rectangle, circle, etc., move on a whiteboard
 - Real-time group chat
 - Whiteboard and chat history persistence
 - Screen sharing
@@ -27,7 +28,8 @@ LiveMeeting is a Django-based web application that allows users to collaborate o
 - **HTML & CSS** — Page structure and styling  
 - **Canvas / SVG** — Whiteboard rendering and interactions  
 
-## Requirements
+## Requirements（requirements.txt）
+
 ```txt
 Django >= 4.2, < 5.3
 djangorestframework
@@ -82,9 +84,8 @@ python manage.py createsuperuser (optional)
 Run the development server:
 
 ```bash
-export DJANGO_SETTINGS_MODULE="livemeeting.settings"   # Linux / Mac
-$env:DJANGO_SETTINGS_MODULE="livemeeting.settings"     # Windows PowerShell
-daphne -p 8000 livemeeting.asgi:application
+#Run the Django project’s ASGI application with Daphne on port 8000
+daphne -p 8000 livemeeting.asgi:application           
 ```
 
 Access the application:
@@ -171,7 +172,7 @@ System Overview & Real-time Data Flow
 
 
 ┌───────────── Django Backend ──────────────────────┐
-│ Models: User, Board, Node, Edge, Msg              │
+│ Models: User, Board, Node, Edge, Message          │
 │ Views / API:                                      │
 │  • User Authentication (Login/Register)           │
 │  • Whiteboard Operations (Add/Move/Connect Nodes) │
@@ -185,13 +186,14 @@ System Overview & Real-time Data Flow
 ┌───────────── Frontend JavaScript ────────────────┐
 │ Whiteboard: Canvas/SVG                           │
 │  • Node creation / Drag / Connect                │
-│  • Data changes → API / WS requests              │
-│ Chat: Real-time messages                         │
-│  • Input → WS → backend broadcast                │
+│  • Data changes → API / WebSocket requests       │
+│ Chat: Real-time Group messages                   │
+│  • Input → WebSocket → backend broadcast         │
 │  • Receive → DOM updates                         │
-│ Video / Screen Share                             │
+│ Screen / Video  Share                            │
 │  • WebRTC or Media API                           │
 │  • Stream → DOM video element                    │
+│  • Screen / Video: New Page / Mini Window        │
 │ UI / Layout                                      │
 │  • Responsive layout (mobile/desktop)            │
 └───────────────────┬──────────────────────────────┘
@@ -200,11 +202,12 @@ System Overview & Real-time Data Flow
 ┌───────── User Mobile Responsive Layout ──────────┐
 │ Header: Logo / Room Name / User                  │
 │ Whiteboard: Main area                            │
-│ Chat: Group / Private toggle                     │
-│ Video/Screen: Mini windows                       │
-│                                                  │
+│ Chat: Real-time Group messages                   │
+│ Screen Sharing: Hidden on mobile devices         │
+│ Video: Mini window                               │
 │ • Portrait: Modules stacked vertically           │
-│ • Landscape: Board left, Chat + Video right      │
+│ • Landscape: Board users and Room list left,     │
+│    Chat + Video right                            │
 │ • Non-core modules auto-hide to save space       │
 └──────────────────────────────────────────────────┘
 ```
@@ -223,7 +226,7 @@ livemeeting is distinct from social networks or e-commerce projects. Its complex
 - Real-time collaboration via WebSockets
 - Whiteboard rendering with Canvas/SVG
 - Versioned storage of whiteboard data
-- Multi-user permissions and roles
+- Multi-user Permissions and Status
 - Integration of chat, video, and screen sharing
 - Mobile responsiveness and touch input handling
 

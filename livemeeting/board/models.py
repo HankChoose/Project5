@@ -8,13 +8,13 @@ class Board(models.Model):
     name = models.CharField(max_length=200)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-    last_accessed = models.DateTimeField(auto_now=True)  # 自动更新时间
+    last_accessed = models.DateTimeField(auto_now=True)  # Automatically update timestamp
     users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="boards", through='BoardUser', blank=True)
 
-    # 新增字段：保存 board 上的操作记录
+    # New field: store operations on the board
     state = models.JSONField(default=list, blank=True)
 
-    #✅ 新增字段：记录当前共享屏幕的用户
+    # ✅ New field: record the user currently sharing screen
     current_sharescreen = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         null=True, 
@@ -39,16 +39,16 @@ class Board(models.Model):
         self.state = []
         self.save()
     
-    # ✅ 在这里添加方法！
+    # ✅ Add method here
     def get_authorized_user_ids(self):
-        from .models import BoardUser  # 避免循环导入
+        from .models import BoardUser  # Avoid circular import
         return BoardUser.objects.filter(board=self, is_authorized=True).values_list("user_id", flat=True)
 
 
 class BoardUser(models.Model):
     board = models.ForeignKey(Board, on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    is_authorized = models.BooleanField(default=False)  # 用户是否有权限操作该白板
+    is_authorized = models.BooleanField(default=False)  # Whether the user has permission to operate this board
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -72,16 +72,17 @@ class Edge(models.Model):
     to_node = models.ForeignKey(Node, on_delete=models.CASCADE, related_name="edges_to")
     created_at = models.DateTimeField(auto_now_add=True)
 
-# 保留现有的 BoardUserPermission 模型，并且新增一些属性
+
+# Keep the existing BoardUserPermission model, and add some properties
 class BoardUserPermission(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     board = models.ForeignKey(Board, on_delete=models.CASCADE)
     can_edit = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)  # 权限记录的创建时间
-    updated_at = models.DateTimeField(auto_now=True)     # 权限更新的时间
+    created_at = models.DateTimeField(auto_now_add=True)  # Permission record creation time
+    updated_at = models.DateTimeField(auto_now=True)     # Permission record update time
 
     def __str__(self):
         return f"{self.user.username} permission on {self.board.name}"
 
     class Meta:
-        unique_together = ['user', 'board']  # 确保一个用户在同一个Board上只能有一条记录
+        unique_together = ['user', 'board']  # Ensure a user can only have one record per board
