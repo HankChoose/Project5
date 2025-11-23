@@ -71,7 +71,6 @@ Run database migrations:
 
 ```bash
 python manage.py makemigrations
-python manage.py makemigrations board
 python manage.py migrate
 ```
 
