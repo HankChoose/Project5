@@ -439,143 +439,200 @@ function updateOnlineDot(userList){
   canvas.addEventListener('mouseleave', ()=>{ if(drawing){drawing=false; currentPath=[]; shapeStart=null; canvas.style.cursor=tool==='pan'?'grab':'crosshair';} });
   
 
-// --- Mobile touch support start ---
+  // --- Mobile touch support start ---
 
-// Get touch coordinates
-function getTouchPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches[0] || e.changedTouches[0];
-    return {
-        x: (touch.clientX - rect.left - offsetX) / scale,
-        y: (touch.clientY - rect.top - offsetY) / scale
-    };
-}
+  let pinchZoom = false;
+  let startDist = 0;
+  let pinchCenter = {x:0, y:0};
+  let lastScale = 1;
 
-// Touch Start
-canvas.addEventListener('touchstart', e => {
-    e.preventDefault();
-    const pos = getTouchPos(e);
-    if (tool === 'pan') {
-        panMode = true;
-        drawing = true;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        canvas.style.cursor = 'grabbing';
-        return;
-    }
-    if (!currentTool || !tool) return;
-    drawing = true;
-    ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = color;
-    if (tool === 'pen' || tool === 'eraser') currentPath = [pos];
-    else if (tool === 'rect' || tool === 'circle') shapeStart = pos;
-});
+  // Get distance between two touches
+  function getDistance(touches){
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx*dx + dy*dy);
+  }
 
-// Touch to move
-canvas.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (!drawing) return;
-    const pos = getTouchPos(e);
+  // Get center point between two touches
+  function getCenter(touches){
+      return {
+          x: (touches[0].clientX + touches[1].clientX)/2,
+          y: (touches[0].clientY + touches[1].clientY)/2
+      };
+  }
 
-    if (panMode && tool === 'pan') {
-        const dx = e.touches[0].clientX - startX;
-        const dy = e.touches[0].clientY - startY;
-        offsetX += dx;
-        offsetY += dy;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        redrawCanvas();
-        sendToSocket({ type: 'pan', data: { offsetX, offsetY, scale } });
-        return;
-    }
+  // Get touch coordinates relative to canvas
+  function getTouchPos(e, idx=0) {
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[idx] || e.changedTouches[0];
+      return {
+          x: (touch.clientX - rect.left - offsetX) / scale,
+          y: (touch.clientY - rect.top - offsetY) / scale
+      };
+  }
 
-    if (tool === 'pen') {
-        currentPath.push(pos);
-        redrawCanvas();
-        ctx.save();
-        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
-        drawPathOnContext(ctx, currentPath, color, lineWidth, 'source-over');
-        ctx.restore();
-    } else if (tool === 'eraser') {
-        currentPath.push(pos);
-        redrawCanvas();
-        ctx.save();
-        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
-        drawPathOnContext(ctx, currentPath, null, lineWidth, 'destination-out');
-        ctx.restore();
-    } else if (tool === 'rect' && shapeStart) {
-        const w = pos.x - shapeStart.x;
-        const h = pos.y - shapeStart.y;
-        redrawCanvas();
-        ctx.save();
-        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth;
-        ctx.strokeRect(shapeStart.x, shapeStart.y, w, h);
-        ctx.restore();
-    } else if (tool === 'circle' && shapeStart) {
-        const dx = pos.x - shapeStart.x;
-        const dy = pos.y - shapeStart.y;
-        const r = Math.sqrt(dx * dx + dy * dy);
-        redrawCanvas();
-        ctx.save();
-        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-        ctx.arc(shapeStart.x, shapeStart.y, r, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-    }
-});
+  // Touch Start
+  canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
 
-// Touch End
-canvas.addEventListener('touchend', e => {
-    e.preventDefault();
-    if (!drawing) return;
-    drawing = false;
-    if (panMode && tool === 'pan') {
-        panMode = false;
-        canvas.style.cursor = 'grab';
-        return;
-    }
-    const pos = getTouchPos(e);
+      if(e.touches.length === 2){
+          // Start pinch zoom
+          pinchZoom = true;
+          startDist = getDistance(e.touches);
+          pinchCenter = getCenter(e.touches);
+          lastScale = scale;
+          return;
+      }
 
-    if (tool === 'pen' && currentPath.length >= 2) {
-        const action = { type: 'path', data: { points: currentPath.slice(), color, lineWidth } };
-        undoStack.push(action);
-        redoStack.length = 0;
-        sendToSocket(action);
-        currentPath = [];
-    } else if (tool === 'eraser' && currentPath.length >= 1) {
-        const action = { type: 'erase', data: { points: currentPath.slice(), lineWidth } };
-        undoStack.push(action);
-        redoStack.length = 0;
-        sendToSocket(action);
-        currentPath = [];
-    } else if (tool === 'rect' && shapeStart) {
-        const w = pos.x - shapeStart.x;
-        const h = pos.y - shapeStart.y;
-        const action = { type: 'rect', data: { x: shapeStart.x, y: shapeStart.y, width: w, height: h, color, lineWidth } };
-        undoStack.push(action);
-        redoStack.length = 0;
-        sendToSocket(action);
-        shapeStart = null;
-        redrawCanvas();
-    } else if (tool === 'circle' && shapeStart) {
-        const dx = pos.x - shapeStart.x;
-        const dy = pos.y - shapeStart.y;
-        const r = Math.sqrt(dx * dx + dy * dy);
-        const action = { type: 'circle', data: { x: shapeStart.x, y: shapeStart.y, radius: r, color, lineWidth } };
-        undoStack.push(action);
-        redoStack.length = 0;
-        sendToSocket(action);
-        shapeStart = null;
-        redrawCanvas();
-    }
-});
+      const pos = getTouchPos(e);
 
-// --- Mobile touch support end ---
+      if (tool === 'pan') {
+          panMode = true;
+          drawing = true;
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          canvas.style.cursor = 'grabbing';
+          return;
+      }
+
+      if (!currentTool || !tool) return;
+
+      drawing = true;
+      ctx.lineWidth = lineWidth;
+      ctx.strokeStyle = color;
+      if (tool === 'pen' || tool === 'eraser') currentPath = [pos];
+      else if (tool === 'rect' || tool === 'circle') shapeStart = pos;
+  });
+
+  // Touch Move
+  canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+
+      if(pinchZoom && e.touches.length === 2){
+          // Pinch zoom logic
+          const newDist = getDistance(e.touches);
+          const newScale = lastScale * (newDist / startDist);
+
+          const rect = canvas.getBoundingClientRect();
+          const cx = (pinchCenter.x - rect.left - offsetX)/scale;
+          const cy = (pinchCenter.y - rect.top - offsetY)/scale;
+
+          offsetX -= cx * (newScale - scale);
+          offsetY -= cy * (newScale - scale);
+
+          scale = newScale;
+          redrawCanvas();
+          sendToSocket({type:'pan', data:{offsetX, offsetY, scale}});
+          return;
+      }
+
+      if (!drawing) return;
+      const pos = getTouchPos(e);
+
+      if (panMode && tool === 'pan') {
+          const dx = e.touches[0].clientX - startX;
+          const dy = e.touches[0].clientY - startY;
+          offsetX += dx;
+          offsetY += dy;
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          redrawCanvas();
+          sendToSocket({ type: 'pan', data: { offsetX, offsetY, scale } });
+          return;
+      }
+
+      if (tool === 'pen') {
+          currentPath.push(pos);
+          redrawCanvas();
+          ctx.save();
+          ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+          drawPathOnContext(ctx, currentPath, color, lineWidth, 'source-over');
+          ctx.restore();
+      } else if (tool === 'eraser') {
+          currentPath.push(pos);
+          redrawCanvas();
+          ctx.save();
+          ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+          drawPathOnContext(ctx, currentPath, null, lineWidth, 'destination-out');
+          ctx.restore();
+      } else if (tool === 'rect' && shapeStart) {
+          const w = pos.x - shapeStart.x;
+          const h = pos.y - shapeStart.y;
+          redrawCanvas();
+          ctx.save();
+          ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = lineWidth;
+          ctx.strokeRect(shapeStart.x, shapeStart.y, w, h);
+          ctx.restore();
+      } else if (tool === 'circle' && shapeStart) {
+          const dx = pos.x - shapeStart.x;
+          const dy = pos.y - shapeStart.y;
+          const r = Math.sqrt(dx * dx + dy * dy);
+          redrawCanvas();
+          ctx.save();
+          ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = lineWidth;
+          ctx.beginPath();
+          ctx.arc(shapeStart.x, shapeStart.y, r, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+      }
+  });
+
+  // Touch End
+  canvas.addEventListener('touchend', e => {
+      e.preventDefault();
+
+      if(e.touches.length < 2) pinchZoom = false;
+
+      if (!drawing) return;
+      drawing = false;
+
+      if (panMode && tool === 'pan') {
+          panMode = false;
+          canvas.style.cursor = 'grab';
+          return;
+      }
+
+      const pos = getTouchPos(e);
+
+      if (tool === 'pen' && currentPath.length >= 2) {
+          const action = { type: 'path', data: { points: currentPath.slice(), color, lineWidth } };
+          undoStack.push(action);
+          redoStack.length = 0;
+          sendToSocket(action);
+          currentPath = [];
+      } else if (tool === 'eraser' && currentPath.length >= 1) {
+          const action = { type: 'erase', data: { points: currentPath.slice(), lineWidth } };
+          undoStack.push(action);
+          redoStack.length = 0;
+          sendToSocket(action);
+          currentPath = [];
+      } else if (tool === 'rect' && shapeStart) {
+          const w = pos.x - shapeStart.x;
+          const h = pos.y - shapeStart.y;
+          const action = { type: 'rect', data: { x: shapeStart.x, y: shapeStart.y, width: w, height: h, color, lineWidth } };
+          undoStack.push(action);
+          redoStack.length = 0;
+          sendToSocket(action);
+          shapeStart = null;
+          redrawCanvas();
+      } else if (tool === 'circle' && shapeStart) {
+          const dx = pos.x - shapeStart.x;
+          const dy = pos.y - shapeStart.y;
+          const r = Math.sqrt(dx * dx + dy * dy);
+          const action = { type: 'circle', data: { x: shapeStart.x, y: shapeStart.y, radius: r, color, lineWidth } };
+          undoStack.push(action);
+          redoStack.length = 0;
+          sendToSocket(action);
+          shapeStart = null;
+          redrawCanvas();
+      }
+  });
+
+  // --- Mobile touch support end ---
 
 
   redrawCanvas();
