@@ -209,7 +209,6 @@ System Overview & Real-time Data Flow
 │ • Landscape: Board users and Room list left,     │
 │    Chat + Video right                            │
 │ • Non-core modules auto-hide to save space       │
-│ • Supports two-finger pinch-to-zoom              │
 └──────────────────────────────────────────────────┘
 ```
 
