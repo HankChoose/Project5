@@ -18,4 +18,4 @@ COPY . /app/
 EXPOSE 8000
 
 # 默认启动命令：运行 Daphne（支持 WebSocket）
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "livemeeting.asgi:application"]
+CMD ["sh", "-c", "python manage.py makemigrations --noinput && python manage.py migrate --noinput && daphne -b 0.0.0.0 -p 8000 livemeeting.asgi:application"]
