@@ -10,13 +10,12 @@ LiveMeeting is a Django-based web application that allows users to collaborate o
 
 ### LiveMeeting Rooms
  - Each user has a personal room (automatically created upon registration), which they and others can enter.
- - Users can create, join, and leave LiveMeeting Rooms in real time.
+ - Users can join, and leave LiveMeeting Rooms in real time.
  - Rooms show a real-time list of participants currently joined.
 
 ### Permissions & toolbar control
  - The room owner can grant or revoke participants' permission to use this room's toolbar.
  - Permissions control whether a participant may: draw, edit (whiteboard objects), view-only, share their screen, or share video.
- - Permission changes apply in real time.
 
 ### Whiteboard tools
  - The toolbar exposes whiteboard actions: freehand draw, rectangle, circle, select/move, erase, and undo/redo.
