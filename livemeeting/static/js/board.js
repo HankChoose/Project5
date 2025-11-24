@@ -18,6 +18,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const permissionCheckInterval = 5000;
 
+  function showPermissionNotice(msg, isGranted){
+    let notice = document.getElementById("permissionNotice");
+    if(!notice){
+        notice = document.createElement("div");
+        notice.id = "permissionNotice";
+        notice.style.position = "fixed";
+        notice.style.top = "10px";
+        notice.style.right = "10px";
+        notice.style.backgroundColor = "#444";
+        notice.style.color = "#fff";
+        notice.style.padding = "8px 12px";
+        notice.style.borderRadius = "4px";
+        notice.style.zIndex = 9999;
+        notice.style.opacity = 0;
+        notice.style.transition = "opacity 0.3s";
+        document.body.appendChild(notice);
+    }
+    notice.textContent = msg;
+    notice.style.opacity = 1;
+    // 自动淡出
+    setTimeout(() => { notice.style.opacity = 0; }, 6000);
+
+    // 立即刷新 toolbar
+    updateToolbar();
+  }
   // === Permission Check ===
   function checkPermissions() {
     fetch(`/board/check_permissions/${BOARD_ID}/`)
@@ -25,18 +50,14 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(data => {
         const userPermission = data.can_edit;
 
-        if (userPermission && !window.permissionGranted) {
+       if (userPermission && !window.permissionGranted) {
           window.permissionGranted = true;
-          updateToolbar(); // Show toolbar
-          updateAuthorizedLabels();
-          alert("You have been granted permission to edit the board!");
+          showPermissionNotice("You have been granted permission to edit the board!", true);
 
         } 
         else if (!userPermission && window.permissionGranted) {
           window.permissionGranted = false;
-          updateToolbar(); // Update toolbar
-          updateAuthorizedLabels();
-          alert("Your editing permission has been revoked!");
+          showPermissionNotice("Your editing permission has been revoked!", false);
         }
       }).catch(err => console.error(err));
   }
@@ -77,10 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (window.permissionGranted || isHost) {
         toolbar.style.display = 'block';
-        canvasWrap.style.display = 'block'; // Show board
+        canvasWrap.style.pointerEvents = 'auto'; // Can do
     } else {
         toolbar.style.display = 'none';
-        canvasWrap.style.display = 'none'; // Hide board
+        canvasWrap.style.pointerEvents = 'none'; // Cannot do but can see
 
         currentTool = null;
         tool = null;

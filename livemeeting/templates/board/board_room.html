@@ -47,13 +47,13 @@
     </div>
 
     {% if is_host %}
-      <p>You are the owner of this Board and can manage it.</p>
+      <p>You are the room owner and can manage it.</p>
       <!-- Grant and Revoke Buttons -->
    
       <button id="grant-btn" class="btn-primary-custom" onclick="grantPermission()">Grant Permission</button>
       <button id="revoke-btn" class="btn-primary-custom" onclick="revokePermission()">Revoke Permission</button>
     {% else %}
-      <p>You are not the owner of this Board.</p>
+      <p>You are not the room owner.</p>
     {% endif %}
 
     <h3>Accessible Rooms</h3>
