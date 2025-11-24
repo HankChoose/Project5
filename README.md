@@ -4,18 +4,43 @@ LiveMeeting is a Django-based web application that allows users to collaborate o
 
 ## Core Features
 
-- User registration and login
-- Create and join collaborative whiteboard rooms
-- Multi-user Permissions and Status: 
-    - Room owners can grant or revoke access for participants
-    - Participants’ abilities (draw, edit, view, share screen, or share video) are controlled via the toolbar
-    - Join or leave the room in real time
-- Draw, rectangle, circle, etc., move on a whiteboard
-- Real-time group chat
-- Whiteboard and chat history persistence
-- Screen sharing
-- Video sharing
-- Mobile-responsive design
+### User registration & login
+ - Users can register and sign in with a username and password.
+ - Upon successful registration, each user is automatically given a personal LiveMeeting Room named after them.
+
+### LiveMeeting Rooms
+ - Each user has a personal room (automatically created upon registration), which they and others can enter.
+ - Users can create, join, and leave LiveMeeting Rooms in real time.
+ - Rooms show a real-time list of participants currently joined.
+
+### Permissions & toolbar control
+ - The room owner can grant or revoke participants' permission to use this room's toolbar.
+ - Permissions control whether a participant may: draw, edit (whiteboard objects), view-only, share their screen, or share video.
+ - Permission changes apply in real time.
+
+### Whiteboard tools
+ - The toolbar exposes whiteboard actions: freehand draw, rectangle, circle, select/move, erase, and undo/redo.
+ - All drawing and object manipulation are synchronized in real time across participants.
+
+### Screen sharing
+ - Room owner or participants with permission can share their desktop or application windows.
+ - Screen sharing is controlled from the toolbar and available to all current room participants, including users who rejoin the room.
+
+### Videos sharing
+ - Room owners or participants with permission can share video with all room participants, including users who rejoin the room.
+
+### Real-time group chat
+ - Each room includes a text chat for real-time group messages.
+ - Chat messages are visible to all current room members, including users who rejoin the room.
+
+### History persistence
+ - Whiteboard content and chat history are saved to persistent storage so room state can be restored later.
+ - When a user (re)joins a room, they can load the latest saved whiteboard and recent chat history.
+
+### Mobile-responsive design
+ - The UI is fully responsive and usable on phones, tablets, and desktop screens.
+ - Touch input is supported for drawing and object manipulation on mobile devices.
+
 
 ## Technologies
 
