@@ -93,30 +93,34 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateToolbar() {
     const toolbar = document.getElementById('toolbar');
     const canvasWrap = document.getElementById('canvas-wrap');
+    const readonlyMsg = document.getElementById('readonly-msg');
 
-    if (!toolbar || !canvasWrap) return;
+    if (!canvasWrap) return;
 
     if (window.permissionGranted || isHost) {
-        toolbar.style.display = 'block';
-        canvasWrap.style.pointerEvents = 'auto'; // Can do
+        if (toolbar) toolbar.style.display = 'block';
+        canvasWrap.style.pointerEvents = 'auto';
+        if (readonlyMsg) readonlyMsg.style.display = 'none';
     } else {
-        toolbar.style.display = 'none';
-        canvasWrap.style.pointerEvents = 'none'; // Cannot do but can see
+        if (toolbar) toolbar.style.display = 'none';
+        canvasWrap.style.pointerEvents = 'none';
+        if (readonlyMsg) readonlyMsg.style.display = 'block';
 
+        // Disable the current drawing state
         currentTool = null;
         tool = null;
         const canvas = document.getElementById('board-canvas');
         if (canvas) canvas.style.cursor = 'default';
-        
         drawing = false;
         panMode = false;
         currentPath = [];
         shapeStart = null;
     }
 
-    // --- Update user authorization labels ---
+    // --- Update user authorization tags ---
     updateAuthorizedLabels();
   }
+
 
   updateToolbar();  // Initial page render
   updateAuthorizedLabels(); // Initial update of authorized labels

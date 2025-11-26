@@ -104,9 +104,11 @@
             <button id="clear-btn">🗑️ Clear</button>
           </div>
         </div>
-      {% else %}
-        <p>You can only view the board and cannot make changes.</p>
       {% endif %}
+
+      <p id="readonly-msg" style="color:rgb(14, 3, 47); display:none;">
+        You can only view the board and cannot make changes.
+      </p>
 
       <div id="canvas-wrap">
         <canvas id="board-canvas" width="1000" height="300"></canvas>
